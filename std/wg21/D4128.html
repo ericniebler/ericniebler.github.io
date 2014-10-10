@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="D4128: Ranges for the Standard Library: Revision 1 : ">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="../../stylesheets/stylesheet.css">
+
+    <title>D4128: Ranges for the Standard Library: Revision 1</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/ericniebler/range-v3">View on GitHub</a>
+
+          <h1 id="project_title">D4128: Ranges for the Standard Library: Revision 1</h1>
+          <h2 id="project_tagline"></h2>
+
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <table border="0" cellpadding="0" cellspacing="0" width="607">
+<table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" width="607">
+  <tr>
+    <td width="172" align="left" valign="top">Document number:</td>
+    <td width="435">
+      <span style="background-color: #FFFF00">D4128</span>=yy-nnnn
+    </td>
+  </tr>
+  <tr>
+    <td width="172" align="left" valign="top">Date:</td>
+    <td width="435">2014-10-10</td>
+  </tr>
+  <tr>
+    <td width="172" align="left" valign="top">Project:</td>
+    <td width="435">Programming Language C++, Library Working Group</td>
+  </tr>
+  <tr>
+    <td width="172" align="left" valign="top">Reply-to:</td>
+    <td width="435">
+      Eric Niebler &lt;<a href="mailto:eniebler@boost.org">eniebler@boost.org</a>&gt;,<br/>
+      Sean Parent &lt;<a href="mailto:sparent@adobe.com">sparent@adobe.com</a>&gt;,<br/>
+      Andrew Sutton &lt;<a href="mailto:andrew.n.sutton@gmail.com">andrew.n.sutton@gmail.com</a>&gt;
+    </td>
+  </tr>
+</table>
+<div id="header">
+<h1 class="title">Ranges for the Standard Library, Revision 1</h1>
+</div>
+<blockquote>
+  <p>“A beginning is the time for taking the most delicate care that the balances are correct.”</p>
+  <p>
+    – Frank Herbert, <em>Dune</em>
+  </p>
+</blockquote>
+<div id="TOC">
+<ul>
+<li><a href="#introduction"><span class="toc-section-number">1</span> Introduction</a></li>
+<li><a href="#motivation-and-scope"><span class="toc-section-number">2</span> Motivation and Scope</a><ul>
+<li><a href="#impact-on-the-standard"><span class="toc-section-number">2.1</span> Impact on the Standard</a></li>
+</ul></li>
+<li><a href="#proposed-design"><span class="toc-section-number">3</span> Proposed Design</a><ul>
+<li><a href="#design-goals"><span class="toc-section-number">3.1</span> Design Goals</a></li>
+<li><a href="#high-level-design"><span class="toc-section-number">3.2</span> High-Level Design</a></li>
+<li><a href="#design-decisions-guidelines-and-rationale"><span class="toc-section-number">3.3</span> Design Decisions, Guidelines, and Rationale</a><ul>
+<li><a href="#iterator-operations-are-primitive"><span class="toc-section-number">3.3.1</span> Iterator Operations are Primitive</a></li>
+<li><a href="#ranges-cannot-own-elements"><span class="toc-section-number">3.3.2</span> Ranges Cannot Own Elements</a></li>
+<li><a href="#ranges-are-semiregular"><span class="toc-section-number">3.3.3</span> Ranges Are Semiregular</a></li>
+<li><a href="#range-iterators-cannot-outlive-their-ranges"><span class="toc-section-number">3.3.4</span> Range Iterators Cannot Outlive Their Ranges</a></li>
+<li><a href="#an-iterables-end-may-have-a-different-type-than-its-begin"><span class="toc-section-number">3.3.5</span> An Iterable’s End May Have a Different Type Than Its Begin</a></li>
+<li><a href="#algorithm-return-types-are-changed-to-accommodate-sentinels"><span class="toc-section-number">3.3.6</span> Algorithm Return Types are Changed to Accommodate Sentinels</a></li>
+<li><a href="#orthogonality-of-traversal-and-access-is-not-surfaced-in-the-iterator-concepts"><span class="toc-section-number">3.3.7</span> Orthogonality of Traversal and Access Is Not Surfaced in the Iterator Concepts</a></li>
+<li><a href="#additional-overloads-of-the-algorithms"><span class="toc-section-number">3.3.8</span> Additional Overloads of the Algorithms</a></li>
+<li><a href="#range-based-for-loop-is-changed-to-accommodate-sentinels"><span class="toc-section-number">3.3.9</span> Range-based for Loop is Changed to Accommodate Sentinels</a></li>
+<li><a href="#allow-mutable-only-iterables"><span class="toc-section-number">3.3.10</span> Allow Mutable-Only Iterables</a></li>
+<li><a href="#range-adaptors-are-lazy-algorithms"><span class="toc-section-number">3.3.11</span> Range Adaptors are Lazy Algorithms</a></li>
+<li><a href="#all-algorithms-accept-sentinels-even-if-they-need-an-end-iterator"><span class="toc-section-number">3.3.12</span> All Algorithms Accept Sentinels Even If They Need An End Iterator</a></li>
+<li><a href="#there-is-no-function-signature-to-express-does-not-mutate-the-range-elements"><span class="toc-section-number">3.3.13</span> There Is No Function Signature To Express Does-Not-Mutate-The-Range-Elements</a></li>
+<li><a href="#singular-ranges-are-not-empty"><span class="toc-section-number">3.3.14</span> Singular Ranges Are Not Empty</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#concept-definitions"><span class="toc-section-number">4</span> Concept Definitions</a><ul>
+<li><a href="#iterator-concepts"><span class="toc-section-number">4.1</span> Iterator Concepts</a></li>
+<li><a href="#iterator-range-concepts"><span class="toc-section-number">4.2</span> Iterator Range Concepts</a></li>
+<li><a href="#iterable-concepts"><span class="toc-section-number">4.3</span> Iterable Concepts</a></li>
+<li><a href="#sized-iterable-concepts"><span class="toc-section-number">4.4</span> Sized Iterable Concepts</a></li>
+</ul></li>
+<li><a href="#technical-specifications"><span class="toc-section-number">5</span> Technical Specifications</a></li>
+<li><a href="#future-directions"><span class="toc-section-number">6</span> Future Directions</a></li>
+<li><a href="#acknowledgements"><span class="toc-section-number">7</span> Acknowledgements</a></li>
+<li><a href="#references"><span class="toc-section-number">8</span> References</a></li>
+<li><a href="#appendix-1-sentinels-and-code-generation"><span class="toc-section-number">9</span> Appendix 1: Sentinels and Code Generation</a></li>
+<li><a href="#appendix-2-sentinels-iterators-and-the-cross-type-equalitycomparable-concept"><span class="toc-section-number">10</span> Appendix 2: Sentinels, Iterators, and the Cross-Type EqualityComparable Concept</a><ul>
+<li><a href="#sentinel-equality"><span class="toc-section-number">10.1</span> Sentinel Equality</a></li>
+</ul></li>
+<li><a href="#appendix-3-d-ranges-and-algorithmic-complexity"><span class="toc-section-number">11</span> Appendix 3: D Ranges and Algorithmic Complexity</a></li>
+<li><a href="#appendix-4-on-counted-ranges-and-efficiency"><span class="toc-section-number">12</span> Appendix 4: On Counted Ranges and Efficiency</a><ul>
+<li><a href="#single-pass-algorithms-with-counted-iterators"><span class="toc-section-number">12.1</span> Single-Pass Algorithms with Counted Iterators</a></li>
+<li><a href="#multi-pass-algorithms-with-counted-iterators"><span class="toc-section-number">12.2</span> Multi-Pass Algorithms with Counted Iterators</a></li>
+<li><a href="#counted-algorithms-with-counted-iterators"><span class="toc-section-number">12.3</span> Counted Algorithms with Counted Iterators</a></li>
+<li><a href="#benchmark-insertion-sort"><span class="toc-section-number">12.4</span> Benchmark: Insertion Sort</a></li>
+</ul></li>
+<li><a href="#appendix-5-drive-by-improvements-to-the-standard-algorithms"><span class="toc-section-number">13</span> Appendix 5: Drive-By Improvements to the Standard Algorithms</a><ul>
+<li><a href="#higher-order-algorithms-should-take-invokables-instead-of-functions"><span class="toc-section-number">13.1</span> Higher-Order Algorithms Should Take Invokables Instead of Functions</a></li>
+<li><a href="#algorithms-should-take-invokable-projections"><span class="toc-section-number">13.2</span> Algorithms Should Take Invokable Projections</a><ul>
+<li><a href="#projections-versus-range-transform-view"><span class="toc-section-number">13.2.1</span> Projections versus Range Transform View</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#appendix-6-implementation-notes"><span class="toc-section-number">14</span> Appendix 6: Implementation Notes</a><ul>
+<li><a href="#on-distinguishing-ranges-from-non-range-iterables"><span class="toc-section-number">14.1</span> On Distinguishing Ranges from Non-Range Iterables</a></li>
+<li><a href="#algorithm-implementation-with-projections"><span class="toc-section-number">14.2</span> Algorithm Implementation with Projections</a></li>
+<li><a href="#algorithms-that-need-an-end-iterator"><span class="toc-section-number">14.3</span> Algorithms That Need An End Iterator</a></li>
+</ul></li>
+</ul>
+</div>
+<h1 id="introduction"><span class="header-section-number">1</span> Introduction</h1>
+<p>This paper outlines what support for ranges in the C++ standard library might look like. Rather than presenting a final design, this paper proposes a set of concepts and guidelines for using them to implement range-based versions of the standard algorithms. It draws inspiration from the <a href="http://www.boost.org/libs/range" title="Boost.Range">Boost.Range</a><span class="citation">[4]</span> library, the range algorithms in <a href="http://stlab.adobe.com/" title="Adobe Source Libraries">Adobe Source Libraries</a><span class="citation">[1]</span>, <em>Elements of Programming</em> by Stepanov and McJones (2009) <span class="citation">[20]</span>, and from <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351 “A Concept Design for the STL”</a> by Stroustrup and Sutton (2012) <span class="citation">[21]</span>. In addition to presenting the concepts and guidelines, this paper discusses the rationale behind each, weighing different design options.</p>
+<p>The decision to defer any discussion about specific wording was taken in recognition of the fact that any range design is likely to undergo significant revision by the committee. The paper is intended merely as a starting point for discussion and as a basis for future work.</p>
+<p>This paper assumes the availability of Concepts Lite; however, everything suggested here has been implemented in C++11, where Concepts Lite has been simulated with the help of generalized SFINAE for expressions.</p>
+<h1 id="motivation-and-scope"><span class="header-section-number">2</span> Motivation and Scope</h1>
+<p>A <em>range</em> is an object that refers to a sequence of elements, conceptually similar to a pair of iterators. One prime motivation for ranges is to give users a simpler syntax for calling algorithms. Rather than this:</p>
+<pre><code>std::vector&lt;int&gt; v { /*...*/ };
+std::sort( v.begin(), v.end() );</code></pre>
+<p>Ranges would give us a pithier syntax:</p>
+<pre><code>std::sort( v );</code></pre>
+<p>Allowing algorithms to take a single range object instead of separate begin and end iterators brings other benefits besides convenience. In particular:</p>
+<ul>
+<li>It eliminates the possibility of mismatched iterators.</li>
+<li>It opens the door to <em>range adaptors</em> which lazily transform or filter their underlying sequence in interesting ways.</li>
+</ul>
+<p>Range adaptors are far more compelling than iterator adaptors due to the fact that only a single object, the range object, needs to be adapted; hence, adaptors can be easily chained to create lazy computational pipelines, as in the code below which sums the first 10 squares:</p>
+<pre><code>int total = accumulate(view::iota(1) |
+                       view::transform([](int x){return x*x;}) |
+                       view::take(10), 0);</code></pre>
+<p>The standard defines the term “range” in [iterator.requirements.general]:</p>
+<blockquote>
+<p>[…] in general, a range <code>[i,j)</code> refers to the elements in the data structure starting with the element pointed to by <code>i</code> and up to but not including the element pointed to by <code>j</code>. Range <code>[i,j)</code> is valid if and only if <code>j</code> is reachable from <code>i</code>.</p>
+</blockquote>
+<p>From the perspective of the standard library, a range <em>is</em> a pair of iterators. But there are other interesting ways to denote a range of elements:</p>
+<ul>
+<li>An iterator and a count of elements</li>
+<li>An iterator and a (possibly stateful) predicate that indicates when the range is exhausted.</li>
+</ul>
+<p>One of these three range types can be used to denote all other range types, like an iterator and a sentinel value (e.g. a null-terminated string), or a range that spans disjoint ranges. Ideally, we would like our Range abstraction to be general enough to accommodate the three different kinds of ranges since that would increase the applicability of the algorithms.</p>
+<h2 id="impact-on-the-standard"><span class="header-section-number">2.1</span> Impact on the Standard</h2>
+<p>Although this paper does not offer specific wording for any additions to the standard, we imagine that proper support for ranges in C++ would involve changes to the following parts of the standard:</p>
+<ul>
+<li>New library-wide concepts related to ranges.</li>
+<li>New iterator algorithms for efficiently dealing with the new abstractions.</li>
+<li>Changes to existing algorithms to constrain the templates with concepts.</li>
+<li>Additional overloads of existing algorithms that accept ranges instead of pairs of iterators.</li>
+<li>Changes to the containers to allow containers to be constructed and assigned from ranges, and to allow range-based insert operations.</li>
+<li>A new library section for range adaptors, which are views of existing data that have been transformed or filtered and that compose with other views.</li>
+<li>General utilities for the construction of custom range adaptors.</li>
+<li>A minor change to the specification of the range-based <code>for</code> to make it more efficient and general.</li>
+</ul>
+<p>Future papers will make specific recommendations for all of the above, modulo any feedback on the design presented here.</p>
+<h1 id="proposed-design"><span class="header-section-number">3</span> Proposed Design</h1>
+<p>The design space for ranges is surprisingly large. At one end of the spectrum lies <a href="http://www.boost.org/libs/range" title="Boost.Range">Boost.Range</a><span class="citation">[4]</span> and <a href="http://stlab.adobe.com/" title="Adobe Source Libraries">Adobe’s ASL</a><span class="citation">[1]</span> in which ranges are a thin abstraction on top of iterators, which remain the primitives that glue together data structures and algorithms. At the other end of the spectrum we find the <a href="http://dlang.org/phobos/std_range.html" title="D Phobos std.range">D Standard Library’s std.range module</a><span class="citation">[6]</span>, in which ranges and operations on them are the primitives themselves.</p>
+<p>This proposal picks a single point in this design space, and here we present the decisions that led to the selection of that point, along with guidelines to be applied to the standard library and the rationale for each choice.</p>
+<h2 id="design-goals"><span class="header-section-number">3.1</span> Design Goals</h2>
+<p>We feel that a well-designed range abstraction would:</p>
+<ul>
+<li>Allow algorithms to operate on the three kinds of ranges with low or no abstraction penalty and a minimum of syntactic noise,</li>
+<li>Allow range-based algorithms to share implementation with iterator-based algorithms,</li>
+<li>Make it easy for users to reason about the complexity and expense of range operations (e.g. How many passes over the data are made? Are the elements copied? etc.),</li>
+<li>Protect the user from lifetime issues,</li>
+<li>Make it straightforward for users to make their types model one of the range concepts.</li>
+</ul>
+<p>It is helpful at this point to reflect on the success of C++11’s range-based <code>for</code> loop. It succeeds because most of the types over which one would want to iterate already define iterators and <code>begin</code>/<code>end</code> members. Cleanly and efficiently interoperating with and reusing the existing abstractions of the STL is critical to the success of any range extensions.</p>
+<h2 id="high-level-design"><span class="header-section-number">3.2</span> High-Level Design</h2>
+<p>At the highest level, this paper proposes the addition of two related range concepts: Iterable and Range. An <em>Iterable</em> type is one for which we can call <code>begin()</code> and <code>end()</code> to yield an iterator/sentinel pair. (Sentinels are described below.) The Iterable concept says nothing about the type’s constructibility or assignability. Range-based standard algorithms are constrained using the Iterable concept. Consider:</p>
+<pre><code>int buf[5000];
+// Fill buf
+std::sort( buf );</code></pre>
+<p><code>buf</code> denotes a random access range of elements, so we should be able to sort it; but native arrays are neither copyable nor assignable, so these operations should not be required by whatever range-like concept is used to constrain <code>sort</code>. The above line of code is equivalent to:</p>
+<pre><code>using std::begin;
+using std::end;
+std::sort( begin( buf ), end( buf ) );</code></pre>
+<p>For an Iterable object <code>o</code>, the concept requires the following:</p>
+<pre><code>auto b = begin( o ); // b models Iterator
+auto e = end( o );   // e models Regular
+bool f = (b == e);   // b and e model EqualityComparable</code></pre>
+<p>Algorithms will typically be implemented to take iterator/sentinel pairs, rather than the iterator/iterator pairs as they do now. A typical algorithm might look like:</p>
+<pre><code>template&lt;Iterator I, Regular S, /*...*/&gt;
+    requires EqualityComparable&lt;I, S&gt;
+I some_algo(I first, S last, /*...*/)
+{
+    for(; first != last; ++first)
+        /*...*/
+    return first;
+}
+
+template&lt;Iterable R, /*...*/&gt;
+IteratorOf&lt;R&gt; some_algo( R &amp; r, /*...*/ )
+{
+    return some_algo( begin(r), end(r), /*...*/ );
+}</code></pre>
+<p>The <em>Range</em> concept is modeled by lightweight objects that denote a range of elements they do not own. A pair of iterators can be a model of Range, whereas a <code>vector</code> is not. Range, as opposed to Iterable, requires copyability and assignability. Copying and assignment are required to execute in constant time; that is, the cost of these operations is not proportional to the number of elements in the Range.</p>
+<p>The Range concept refines the Iterable concept by additionally requiring following valid expressions for an object <code>o</code> of type <code>O</code>:</p>
+<pre><code>// Constructible:
+auto o1 = o;
+auto o2 = std::move(o);
+O o3; // default-constructed, singular
+// Assignable:
+o2 = o1;
+o2 = std::move(o1);
+// Destructible
+o.~O();</code></pre>
+<p>The Range concept exists to give the range adaptors consistent and predictable semantics, and memory and performance characteristics. Since adaptors allow the composition of range objects, those objects must be efficiently copyable (or at least movable). The result of adapting a Range is a Range. The result of adapting a container is also a Range; the container – or any Iterable that is not already a Range – is first converted to a Range automatically by taking the container’s <code>begin</code> and <code>end</code>.</p>
+<p>The precise definitions of the suggested concepts are given in <a href="#concept-definitions">Section 4</a>, along with other supporting concepts that have proven useful while porting the algorithms.</p>
+<p>The use of sentinels instead of iterators as an Iterable’s bound is best understood by seeing how the three different kinds of ranges can be made to model the Iterable concept. Below is a sketch of how <code>begin</code> and <code>end</code> might work for each kind.</p>
+<ul>
+<li><strong>Pair of iterators</strong>: An end iterator is a perfectly acceptable sentinel. Existing code that uses iterator pairs to call STL algorithms will continue working with no changes.</li>
+<li><strong>Iterator and predicate</strong>: <code>begin(rng)</code> can return a normal iterator, <code>first</code>. <code>end(rng)</code> can return a sentinel <code>last</code> such that <code>first == last</code> returns the result of calling <code>last.predicate_(*first)</code>. See <a href="#appendix-1-sentinels-and-code-generation">Appendix 1</a> for a discussion about the code generation benefits of letting the sentinel have a different type than the iterator.</li>
+<li><strong>Iterator and count</strong>: <code>begin(rng)</code> can return an iterator <code>first</code> that bundles the underlying iterator with the count to the end. Incrementing the iterator decrements the count. <code>end(rng)</code> can return an empty sentinel <code>last</code> such that <code>first == last</code> returns the result of <code>first.count_ == 0</code>. See <a href="#appendix-4-on-counted-ranges-and-efficiency">Appendix 4</a> for a discussion of the performance implications of this design.</li>
+</ul>
+<h2 id="design-decisions-guidelines-and-rationale"><span class="header-section-number">3.3</span> Design Decisions, Guidelines, and Rationale</h2>
+<p>Below we present the decisions that led to the chosen high-level design, along with guidelines to be applied to the standard library and the rationale for each choice.</p>
+<h3 id="iterator-operations-are-primitive"><span class="header-section-number">3.3.1</span> Iterator Operations are Primitive</h3>
+<p>The most fundamental decision facing the designer of a generic library like the STL is: what are the <em>basis operations</em>? Basis operations are the primitive operations upon which all other desired operations can be efficiently built. In the STL, those operations are the operations on iterators, and they are clustered into the familiar iterator concept hierarchy. Two iterators are required to denote a range. Can these two positions be bundled together into a single range object and – more ambitiously – can operations on ranges be made the basis, obviating the need for iterators entirely?</p>
+<p>Below we describe two libraries that use range operations as the basis, and describe why they are not a good fit for the C++ Standard Library.</p>
+<h4 id="ds-ranges"><span class="header-section-number">3.3.1.1</span> D’s Ranges</h4>
+<p>In the C++ Standard Library, iterators fill several roles:</p>
+<ul>
+<li>Two of them denote a sequence of elements.</li>
+<li>One of them denotes a position within a range.</li>
+<li>They allow access to an element at the current position.</li>
+<li>They allow access to subsequent (and sometimes prior) positions in the sequence.</li>
+</ul>
+<p>The <a href="http://dlang.org/phobos/std_range.html" title="D Phobos std.range">D Standard Library</a><span class="citation">[6]</span> takes a different approach. In D, ranges and the operations on them form the basis operations of the standard algorithms. D-style ranges fill the following roles:</p>
+<ul>
+<li>They denote a sequence of elements.</li>
+<li>They allow access to the front of the range, and sometimes to the back or the N-th.</li>
+<li>They allow the removal of elements from the front of the range, and sometimes from the back.</li>
+</ul>
+<p>Would C++ benefit from a similar design? The argument typically given in favor of D’s ranges is that they lead to simpler code, both for the algorithms that operate on ranges as well as for users who wish to create custom range types. Code that manipulates positions directly can be harder to reason about and thus more bug-prone, and implementing custom iterators is famously complicated.</p>
+<p>D-style ranges can only ever shrink, and they have no notion of position within sequence. If one were to try to implement C++’s iterators on top of D’s ranges, one would immediately run into trouble implementing ForwardIterator’s <code>operator==</code>. As D’s ranges do not represent position, there would be no way to test two ranges to see if their heads referred to the same element. (The <code>front</code> member function that returns the front of a D range is not required to return a reference, nor would that be sufficient to implement a hypothetical <code>hasSameFront</code> function; a repeating range might return the same element multiple times, leading to false positives.) Additionally, there would be trouble implementing BidirectionalIterator’s <code>operator--</code> or RandomAccessIterator’s <code>operator+=</code> as that might require a range to grow, and D ranges can’t grow.</p>
+<p>On the other hand, two C++ iterators can easily be used to implement a D-style range; thus, every range-based design can be implemented in terms of iterators. Since iterators can implement D ranges, but D ranges cannot be used to implement iterators, we conclude that iterators form a more powerful and foundational basis.</p>
+<p>D avoids the limits of its ranges by carefully designing the algorithms such that the missing functionality is never needed. This can sometimes require some creativity, and leads to some awkward productions. A good example is the <code>find</code> family of algorithms. Since <code>find</code> cannot return the position of the found element, it must instead return a range. But which range to return? The D Standard Library has as many <code>find</code> algorithms as there are answers to this question (<a href="http://dlang.org/phobos/std_algorithm.html#find"><code>find</code></a>, <a href="http://dlang.org/phobos/std_algorithm.html#.findSkip"><code>findSkip</code></a>, <a href="http://dlang.org/phobos/std_algorithm.html#.findSplit"><code>findSplit</code></a>, <a href="http://dlang.org/phobos/std_algorithm.html#.findSplitBefore"><code>findSplitBefore</code></a>, <a href="http://dlang.org/phobos/std_algorithm.html#.findSplitAfter"><code>findSplitAfter</code></a>). All these algorithms find an element in a range; they only differ in the information they return. In contrast, C++ has just one <code>find</code> algorithm; it returns a position, and the user is free to construct any desired range from that.</p>
+<p><a href="#appendix-3-d-ranges-and-algorithmic-complexity">Appendix 3</a> contains an example of an algorithm that cannot be implemented with the same algorithmic complexity using D-style ranges. Any algorithm that needs to freely move an iterator forward and backward between two bounds will suffer from the same fundamental problem. Just writing the signature of an algorithm like <code>rotate</code>, which takes as an argument a position in a sequence, is challenging without a way to specify a position.</p>
+<p>Since C++ iterators cannot be implemented on top of D’s ranges, iterators have to stay both for the increased expressive power and for backwards compatibility. To additionally provide D-style ranges – essentially offering an incompatible set of basis operations – would create a schism within the standard library between range-based and iterator-based algorithms, which couldn’t share code. We, the authors, consider such a schism unacceptable.</p>
+<h4 id="position-based-ranges"><span class="header-section-number">3.3.1.2</span> Position-Based Ranges</h4>
+<p>If a range-first design that abandons “position” as a representable entity is undesirable for C++, perhaps adding position back in yields a satisfactory design. That is the approach taken by <a href="https://github.com/Bekenn/range" title="Position-Based Ranges">James Touton’s range library</a><span class="citation">[16]</span>, where ranges – together with a new Position concept – are the primitives. A Position, as its name suggests, represents a position in a range. Unlike an iterator, a position cannot be used to access the element at that position without the range into which it refers, nor can the position be advanced without the range.</p>
+<p>This design has the following advantages:</p>
+<ul>
+<li>In making position a representable entity, it avoids the sometimes awkward constructions of D’s range library.</li>
+<li>In requiring the range in order to dereference the position, it avoids all dangling iterator issues.</li>
+<li>In requiring the range in order to change the position, it makes range-checking trivial. This is a boon not just for debuggability, but also for the design of certain range adaptors like filter and stride whose iterators need to know the end of the range so as not to walk past it.</li>
+<li>It permits a clean separation of element traversal and access, much like the suggested <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1873.html" title="The Cursor/Property Map Abstraction">cursor/property map abstraction</a><span class="citation">[8]</span>.</li>
+</ul>
+<p>It is possible to implement iterators on top of a position-based range by bundling a position with a pointer to a range into an iterator. However that results in iterators that may be fatter than necessary.</p>
+<p>A more workable approach would be to reimplement all the algorithms in terms of the position-based range primitives, and have the iterator-based overloads (that are retained for backwards-compatibility) forward to the range-based versions. In such a scheme, two iterators can be turned into a position-based range by wrapping them in a single range object and using the iterators themselves as the “positions”.</p>
+<p>Although workable in principle, in practice it means there will be two ways of representing a range: an object with <code>begin()</code> and <code>end()</code> members that return iterators, and one with <code>begin_pos()</code> and <code>end_pos()</code> members that return positions; and every function that accepts ranges will need to account for that. It would mean that everybody would need to learn a new way to write algorithms. And it would mean that sometimes algorithms would return iterators and sometimes they would return positions, and that users would need to learn a new way to access the elements of a range.</p>
+<p>As appealing as the design is, it is too disruptive a change for the Standard Library.</p>
+<h4 id="basis-operations-summary"><span class="header-section-number">3.3.1.3</span> Basis-Operations: Summary</h4>
+<p>In short, it just doesn’t seem worth the trouble to change basis-operation horses in midstream. Iterators have a proven track record as a solid basis for the algorithms, and the C++ community has a heavy investment in the abstraction. The most heavily used and vetted C++ range libraries, Boost.Range and ASL Ranges, are built on top of iterators and have shown that it works in practice. This proposal follows suit.</p>
+<h3 id="ranges-cannot-own-elements"><span class="header-section-number">3.3.2</span> Ranges Cannot Own Elements</h3>
+<p>As described above, a Container is not a Range; it is, however, an Iterable. Distinguishing between the two makes it possible to be explicit about where copyability is required, and with what performance characteristics.</p>
+<p>The algorithms discussed in this proposal don’t require any distinction between Ranges and Containers since they never copy or assign the ranges passed to them; they only request the <code>begin</code> and <code>end</code> iterators. The distinction between Iterables and Ranges only becomes important when defining adaptor chains. What does code like the following mean?</p>
+<pre><code>auto rng = v | view::reverse;</code></pre>
+<p>This creates a view of <code>v</code> that iterates in reverse order. Now: is <code>rng</code> copyable, and if so, how expensive is the copy operation? If <code>v</code> is a <code>vector</code>, can <code>rng</code> safely outlive <code>v</code>? How about if <code>v</code> is just a pair of iterators? What happens when a user does <code>*rng.begin() = 42</code>? Is <code>v</code> mutated? How do the answers change if we replaced <code>v</code> with an rvalue expression? If a copy of <code>rng</code> is made, and an element is mutated through the copy, does the original <code>rng</code> object “see” the change?</p>
+<p>By specifying that Ranges do <em>not</em> own their elements, and further specifying that range adaptors operate on and produce Ranges (not Containers), we are able to answer these questions in a clear and consistent way. The result of a chain of range adaptors is always a lightweight object that is cheap to copy and assign (O(1) as opposed to O(N)), and that refers to elements whose lifetime is managed by some other object. Mutating an element through the resulting Range object mutates the underlying sequence. Copies of the resulting range are aliases to the same elements, and mutations to the elements are visible through all the aliased ranges.</p>
+<p>If <code>v</code> is a Range in the above line of code, it is copied into the adaptor. If it is a <code>vector</code>, the <code>vector</code> is first used to construct a Range by taking the <code>begin</code> and <code>end</code> of the Container. This happens automatically.</p>
+<p>The downside of this design is that it is sometimes desirable to do this:</p>
+<pre><code>// Try to adapt an rvalue container
+auto rng = vector&lt;int&gt;{1,2,3,4} | view::reverse; // OK?</code></pre>
+<p>Adaptors operate on and yield Ranges; other Iterables (i.e., containers) are used to construct Ranges by first taking their begin and end. The code above is unsafe because <code>rng</code> will be left holding invalid iterators into a container that no longer exists. Our solution is to disallow the above code. <em>It is illegal to adapt an rvalue non-Range.</em> (Adapting rvalue Ranges, however, is perfectly acceptable; indeed necessary if adaptor pipelines are to work.) See <a href="#on-distinguishing-ranges-from-non-range-iterables">Appendix 6</a> for the mechanics of how we distinguish between Iterables and Ranges.</p>
+<p>The alternative is for the rvalue container to be moved (or copied) into the adapted range and held by value. The resulting object would therefore no longer model Range; it would model Iterable. The authors feel that this weakening of the requirements on the return type makes it difficult to reason about the semantics and algorithmic complexity of range adaptors. The recommendation is to first declare the container and then create the adaptor separately.</p>
+<h3 id="ranges-are-semiregular"><span class="header-section-number">3.3.3</span> Ranges Are Semiregular</h3>
+<p>We’ve already decided that Ranges (not Iterables) are copyable and assignable. They are, in the terminology of EoP<span class="citation">[20]</span> and <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span>, Semiregular types. It follows that copies are independent, even though the copies are both aliases of the same underlying elements. The ranges are independent in the same way that a copy of a pointer or an iterator is independent from the original. Likewise, iterators from two ranges that are copies of each other are also independent. When the source range goes out of scope, it does not invalidate an iterator into the destination range.</p>
+<p>Semiregular also requires DefaultConstructible in <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a>. We follow suit and require all Ranges to be DefaultConstructible. Although this complicates the implementation of some range types, it has proven useful in practice, so we have kept this requirement.</p>
+<p>It is tempting to make Ranges Regular by requiring that they be EqualityComparable. A Range type would satisfy this additional requirement by testing whether two Ranges refer to the same elements in a sequence. (Note that it would be an error for <code>operator==</code> to test corresponding elements in two Ranges for equality, in the same way that it would be an error for <code>operator==</code> invoked on two pointers to compare the pointed-to elements. The state of a Range is not influenced by the content of its elements; a Range is defined only by the identity of the elements it references.) Although such a requirement is appealing in theory, it has problems:</p>
+<ul>
+<li>It might conflict with users’ expectations of what <code>rng1 == rng2</code> means. (See string_view for an example of a Range-like class that implements <code>operator==</code> in terms of the values of its elements, rather than identity.)</li>
+<li>It is impossible to implement with those semantics in O(1) for some range types; for example, a filter range that stores a predicate. Functors and lambdas are generally not EqualityComparable.</li>
+</ul>
+<p>Another option is to allow Ranges to trivially model EqualityComparable by narrowly defining the domain over which the operation is valid. Iterators may only be compared if they refer into the same range. We can extend the reasoning to Ranges, which are logically little more than pairs of iterators. Taking this tack, we could allow a Range type to define its <code>operator==</code> as:</p>
+<pre><code>rng1.begin() == rng2.begin() &amp;&amp; rng1.end() == rng2.end()</code></pre>
+<p>The assumption being that the operation is invalid if <code>rng1</code> and <code>rng2</code> refer to different elements. Although principled (for some set of principles), such a definition is almost certain to lead users into undefined behavior-land.</p>
+<p>As a result of the above, we have decided that the Range concept should not require EqualityComparable. Ranges are Semiregular, not Regular.</p>
+<p>If a user would like to check to see if two ranges have elements that compare equal, we suggest the <code>equal</code> algorithm:</p>
+<pre><code>if(std::equal(rng1, rng2))
+    // ...</code></pre>
+<h3 id="range-iterators-cannot-outlive-their-ranges"><span class="header-section-number">3.3.4</span> Range Iterators Cannot Outlive Their Ranges</h3>
+<p>Containers own their elements, so it is clear that the container must outlive the iterators it generates. But is the same true for a Range if it does not own its elements? For a trivial range consisting of two iterators, it’s clearly not true; the iterators <em>may</em> outlive the range.</p>
+<p>It turns out that if we require that all range’s iterators be permitted to outlive the range, a great many interesting range types become significantly more expensive at runtime. A good case study is the filter view.</p>
+<p>A filter view takes a range and a predicate, and presents a view of the sequence that skips the elements for which the predicate is false. (The filter view can be thought of as a lazy equivalent of the <code>copy_if</code> algorithm.) The existence of the <code>boost::filter_iterator</code> shows that such an iterator <em>can</em> be made such that it doesn’t depend on a range, but at a cost. The <code>filter_iterator</code> stores:</p>
+<ol>
+<li>An iterator that indicates the current position in the underlying sequence.</li>
+<li>An iterator that indicates the end of the underlying sequence (needed by the increment operators to avoid falling off the end while searching for an element that satisfies the predicate).</li>
+<li>The predicate.</li>
+</ol>
+<p>In today’s STL, the begin and end iterators must have the same type, and they are both needed to call an algorithm. Thus, the information in (2) and (3) is duplicated. Also, the predicate may be expensive to copy, given the ease with which capture-by-value lambdas and <code>std::function</code>s can be created. When such iterators are composed with other kinds of views (e.g., a transformed, filtered view), the bloat compounds exponentially (see <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3782.pdf" title="Indexed-Based Ranges">Index-Based Ranges</a><span class="citation">[19]</span>).</p>
+<p>By relaxing the constraint that a range’s begin and end must have the same type, we can avoid the duplication, but the begin iterator still must hold everything, which is potentially expensive.</p>
+<p>If we could rely on the range object outliving the iterator, we can make the filter iterators smaller and lighter. The range object can hold the predicate and the underlying range’s begin/end iterators. The filter view’s iterator only needs to hold the current position and a pointer back to the range object.</p>
+<p>The same logic applies to the transform view, which applies a transformation function to elements on the fly. If the iterators are required to be valid beyond the lifetime of the transform range, then the transformation function must be cached inside each iterator. This could make the iterators expensive to copy. An implementor might instead want the freedom to put the transformation function in the range object.</p>
+<p>A final example is <code>istream_iterator&lt;T&gt;</code>. Every <code>istream_iterator&lt;T&gt;</code> holds a single cached <code>T</code> object inside it. If <code>T</code> is an expensive-to-copy type like <code>std::string</code>, then copying <code>istream_iterator</code>s is potentially causing dynamic allocations. The STL assumes iterators are cheap to copy and copies them freely. A better design would see the cached <code>string</code> object move into an <code>istream_range</code> object whose iterators merely stored pointers back to the range. This would make the iterators smaller and cheaper to copy, but they would become invalid once the range was destroyed. This tradeoff is probably worth it.</p>
+<h3 id="an-iterables-end-may-have-a-different-type-than-its-begin"><span class="header-section-number">3.3.5</span> An Iterable’s End May Have a Different Type Than Its Begin</h3>
+<p>In today’s STL, <code>c.begin()</code> must have the same type as <code>c.end()</code>. This is because the only kind of range the STL supports is a pair of iterators. However, we’ve given examples of other kinds of ranges we would like to support, such as an iterator and a predicate, and an iterator and a count. These kinds of ranges can already be supported by shoe-horning them into the pair-of-iterators mold, but at a cost (see <a href="#appendix-1-sentinels-and-code-generation">Appendix 1</a>). Loosening the constraints of the type of Iterable’s end makes it possible to accommodate these other kinds of ranges with lower overhead.</p>
+<p>Allowing “end-ness” to be encoded in the type system also eliminates the need to mock-up dummy end iterators like <code>std::istream_iterator</code> and <code>std::regex_iterator</code>, the logic of which is tricky to get right. What’s more, it improves code generation for these kinds of ranges. With the use of dummy end iterators, information which is known at compile-time – namely, that an iterator represents the end – must be encoded into runtime information in the iterator itself. This robs the compiler of the information it needs to eliminate branches from the core loops of many algorithms. See <a href="#appendix-1-sentinels-and-code-generation">Appendix 1</a> for an example of how sentinels can positively affect code generation.</p>
+<p>When considering this choice for the range concept, it’s helpful to think about how it would affect the algorithms. Consider <code>std::for_each</code>, which currently has this signature:</p>
+<pre><code>template&lt;class InputIterator, class Function&gt;
+Function for_each(InputIterator first, InputIterator last, Function f)
+{
+    for(; first != last; ++first)
+        f(*first);
+    return f;
+}</code></pre>
+<p>With sentinels, <code>for_each</code> might look like this:</p>
+<pre><code>template&lt;InputIterator I, Regular S, Function&lt;ValueType&lt;I&gt;&gt; F&gt;
+    requires EqualityComparable&lt;I, S&gt;
+F for_each(I first, S last, F f)
+{
+    for(; first != last; ++first)
+        f(*first);
+    return f;
+}</code></pre>
+<p>None of the code in the algorithm had to change. No calling code would have to change either; this is a strictly backwards-compatible change. You might think that this opens a new category of programming errors where developers inadvertently pass mismatched iterator/sentinel pairs. However, this algorithm signature is constrained with concept checks that ensures that <code>I</code> and <code>S</code> satisfied the cross-type EqualityComparable concept (see <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span>). See <a href="#appendix-2-sentinels-iterators-and-the-cross-type-equalitycomparable-concept">Appendix 2</a> for further discussion about iterator/sentinel cross-type EqualityComparability constraint.</p>
+<p>To see the benefit of this design, imagine a sentinel type <code>null_sentinel</code>:</p>
+<pre><code>// For determining whether an iterator refers to a null value:
+struct null_sentinel
+{
+    template&lt;Iterator I&gt;
+    friend bool operator==(I i, null_sentinel) { return 0 == *i; }
+    // ... and friends
+};
+
+template&lt;Iterator I&gt;
+struct common_type&lt;I, null_sentinel&gt;
+   ... see Appendix 2 ...</code></pre>
+<p>Now we can use <code>std::for_each</code> on null-terminated strings without needing to know the length of the string:</p>
+<pre><code>std::for_each(argv[1], null_sentinel(), f);</code></pre>
+<p>Of course, all the algorithms would have overloads that also accept range arguments, so this can be further simplified to:</p>
+<pre><code>std::for_each(null_terminated(argv[1]), f);</code></pre>
+<p>where <code>null_terminated(InputIterator)</code> returns a range <code>r</code> such that the <code>std::end(r)</code> is a <code>null_sentinel</code>.</p>
+<h4 id="sentinels-and-early-algorithm-termination"><span class="header-section-number">3.3.5.1</span> Sentinels and Early Algorithm Termination</h4>
+<p>One excuse sometimes given for not using the standard algorithm is that they don’t give the users a way to break out of them early. The use of sentinels makes that possible. Consider a sentinel constructed from both an end iterator and a predicate. Such a sentinel would compare equal to an iterator <em>either</em> when the iterator equals the end iterator <em>or</em> when the predicate evaluates to true. Using such a sentinel has the effect of terminating an algorithm early. For instance:</p>
+<pre><code>// Process work items in a queue, allowing for a user interrupt
+std::queue&lt;Work&gt; q;
+std::function&lt;void(Work const &amp;)&gt; user_interrupt = /*...*/;
+std::for_each( q | view::until(user_interrupt), f );</code></pre>
+<p>In the above, <code>view::until</code> is a range modifier that adds <code>user_interrupt</code> as an extra termination condition.</p>
+<h3 id="algorithm-return-types-are-changed-to-accommodate-sentinels"><span class="header-section-number">3.3.6</span> Algorithm Return Types are Changed to Accommodate Sentinels</h3>
+<p>Notice that in the due course of evaluating <code>std::for_each</code> with <code>null_sentinel</code> above, the position of the null terminator is found. This is potentially useful information that can easily be returned to the user. It is, in fact, a far more interesting and useful result that the <code>Function</code> that <code>for_each</code> currently returns. So a better signature for <code>for_each</code> should look like this:</p>
+<pre><code>// Returns an InputIterator i such that (i == last) is true:
+template&lt;InputIterator I, Regular S, Function&lt;ValueType&lt;I&gt;&gt; F&gt;
+    requires EqualityComparable&lt;I, S&gt;
+I for_each(I first, S last, F f);</code></pre>
+<p>In similar fashion, most algorithm get new return types when they are generalized to support sentinels. This is a source-breaking change in many cases. In some cases, like <code>for_each</code>, the change is unlikely to be very disruptive. In other cases it may be more so. Merely accepting the breakage is clearly not acceptable. We can imagine three ways to mitigate the problem:</p>
+<ol>
+<li><p>Only change the return type when the types of the iterator and the sentinel differ. This leads to a slightly more complicated interface that may confuse users. It also greatly complicates generic code, which would need metaprogramming logic just to use the result of calling some algorithms. For this reason, this possibility is not explored here.</p></li>
+<li><p>Make the new return type of the algorithms implicitly convertible to the old return type. Consider <code>copy</code>, which currently returns the ending position of the output iterator. When changed to accommodate sentinels, the return type would be changed to something like <code>pair&lt;I, O&gt;</code>; that is, a pair of the input and output iterators. Instead of returning a <code>pair</code>, we could return a kind of pair that is implicitly convertible to its second argument. This avoids breakage in some, but not all, scenarios. This subterfuge is unlikely to go completely unnoticed.</p></li>
+<li><p>Deliver the new standard library in a separate namespace that users must opt into. In that case, no code is broken until the user explicitly ports their code. The user would have to accommodate the changed return types then. An automated upgrade tool similar to <a href="http://clang.llvm.org/extra/clang-modernize.html" title="Clang Modernize">clang modernize</a><span class="citation">[5]</span> can greatly help here.</p></li>
+</ol>
+<p>We, the authors, prefer (3). Our expectation is that the addition of concepts will occasion a rewrite of the STL to properly concept-ify it. The experience with C++0x Concepts taught us that baking concepts into the STL in a purely backward-compatible way is hard and leads to an unsatisfactory design with a proliferation of meaningless, purely syntactic concepts. The spirit of <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span> is to conceptify the STL in a meaningful way, even at the expense of minor breakage. Although the issue has not yet been discussed, one likely solution would be to deliver a new STL in a separate namespace. Once that happens, it opens the door for other minor breaking changes, provided the benefits are deemed worthy.</p>
+<h3 id="orthogonality-of-traversal-and-access-is-not-surfaced-in-the-iterator-concepts"><span class="header-section-number">3.3.7</span> Orthogonality of Traversal and Access Is Not Surfaced in the Iterator Concepts</h3>
+<p>The current iterator concept hierarchy ties together the traversal and access properties of iterators. For instance, no forward iterator may return an rvalue proxy when it is dereferenced; the ForwardIterator concept requires that unary <code>operator*</code> return an lvalue. There is no room in the hierarchy for, say, a random-access iterator that returns proxies.</p>
+<p>This problem is not new to ranges; however, it has serious consequnces for lazy ranges that apply transformations to elements on the fly. If the transformation function does not return an lvalue, the range’s iterator can model no concept stronger than InputIterator, even if the resulting iterator could in theory allow random access. The result in practice is that most range adaptors today have the unfortunate effect of degrading the underlying range’s category to Input, thereby limiting the number of algorithms it can be passed to – often for no good reason.</p>
+<p>Prior work has been done by <a href="http://www.boost.org/libs/iterator/doc/new-iter-concepts.html" title="New Iterator Concepts">Abrahams et. al.</a><span class="citation">[13]</span> to separate the traversal and access properties of iterators in a way that is backwards compatible. When formalizing the iterator concepts for a range library, should new iterator concepts be used, or should we hew to the old, simpler concept hierarchy with its known limitations?</p>
+<p>A close reading of the iterator concepts proposed by <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span> shows that the problematic requirement on ForwardIterator’s reference type has been dropped. That is, if the concepts proposed by Stroustrup, Sutton, et. al., are adopted, there will be nothing wrong with, say, a random-access iterator with a proxy for a reference type. The problems described above go away without any need for further complication of the iterator refinement hierarchy. It’s unclear at this time if that was the authors’ intent, and if so what impact it has on the standard algorithms. This area requires more research.</p>
+<p>It is noted here that this proposal adopts the <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span> iterator concepts as-is.</p>
+<h3 id="additional-overloads-of-the-algorithms"><span class="header-section-number">3.3.8</span> Additional Overloads of the Algorithms</h3>
+<p>As should be obvious, this range proposal recommends adding additional overloads of the existing algorithms to allow them to work directly on Iterables. This is done in accordance with the following suggested guidelines:</p>
+<ul>
+<li>Any algorithm that currently operates on a range denoted by two iterators gets an overload where the two iterator arguments are replaced with a single Iterable argument. (NOTE: This does <em>not</em> include the counted algorithms like <code>copy_n</code> that take an iterator and a count instead of two iterators.)</li>
+<li>All overloads of an algorithm, whether they take Iterables or separate iterator/sentinel arguments, are <em>semantically identical</em>. All overloads have the same return type. All evaluate eagerly. The intention is that the Iterable-based overloads delegate to the iterator-based ones and have the the same semantics and algorithmic complexity.</li>
+<li><p>As described above, algorithms that necessarily process their entire input sequence return the iterator position at the end in addition to whatever else they return. The purpose is to return potentially useful information that is computed as a side-effect of the normal execution of the algorithm. Exceptions to this design guideline are made when one of the following is true:</p>
+<ul>
+<li>The algorithm might in some cases not consume the entire input sequence. (The point of this exception is to avoid forcing the algorithm to compute something that is not necessary for successful completion. For example, <code>find</code>.)</li>
+<li>When the sole purpose of the algorithm is specifically to compute a single value; hence, changing the return type will necessarily break code using the C++11 version. Examples include <code>is_sorted</code> and <code>accumulate</code>.</li>
+</ul></li>
+<li><p>“Three-legged” iterator-based algorithms (i.e. algorithms that operate on two ranges, the second of which is specified by only a single iterator and is assumed to be long enough) now have 4 versions:</p>
+<ol>
+<li>The old three-legged iterator version,</li>
+<li>A four-legged version that uses the sentinel of the second sequence as an additional termination condition,</li>
+<li>A version that takes an Iterable and an Iterator (which dispatches to the three-legged iterator-based version),<br /> and</li>
+<li>A version that takes two Iterables (which dispatches to the four-legged iterator-based version).</li>
+</ol></li>
+</ul>
+<p>Note: Purely as an implementation consideration, overloads (3) and (4) above must be coded to avoid ambiguity when a native array is passed as the second parameter (where either an Iterable or an Iterator may appear). Arrays are Iterables, but if (3) is naively coded to take an Iterator by value, a native array would also match, since native arrays decay into pointers.</p>
+<ul>
+<li>If an algorithm returns an iterator into an Iterable argument, the Iterable must be an lvalue. This is to avoid<br /> returning an iterator that is immediately made invalid. Conversely, if no iterator into an Iterable argument is<br /> returned, then the Iterable should be taken by forwarding reference (aka <a href="http://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers" title="Universal References in C++11">“universal reference”</a><span class="citation">[22]</span>).</li>
+<li>Algorithms that do not mutate their input sequence must also work when braced initializer lists [dcl.init] are used in place of Iterables. This can require additional <code>initializer_list</code> overloads since a type cannot be deduced from a <em>braced-init-list</em> used as an argument.</li>
+</ul>
+<h3 id="range-based-for-loop-is-changed-to-accommodate-sentinels"><span class="header-section-number">3.3.9</span> Range-based for Loop is Changed to Accommodate Sentinels</h3>
+<p>The current range-based <code>for</code> loop assumes that a range’s end has the same type as its begin. This restriction can be relaxed to allow range-based <code>for</code> to operate on Iterables.</p>
+<p>The range-based for loop is currently specified as:</p>
+<pre><code>{
+    auto &amp;&amp; __range = range-init;
+    for ( auto __begin = begin-expr,
+               __end = end-expr;
+          __begin != __end;
+          ++__begin ) {
+        for-range-declaration = *__begin;
+        statement
+    }
+}</code></pre>
+<p>To accommodate Iterables, the change is as simple as:</p>
+<pre><code>{
+    auto &amp;&amp; __range = range-init;
+    auto __begin = begin-expr;
+    auto __end = end-expr;
+    for ( ; __begin != __end; ++__begin ) {
+        for-range-declaration = *__begin;
+        statement
+    }
+}</code></pre>
+<p>This is the only core language change required to fully support Iterables.</p>
+<h3 id="allow-mutable-only-iterables"><span class="header-section-number">3.3.10</span> Allow Mutable-Only Iterables</h3>
+<p>If a cv-unqualified type <code>T</code> models Iterable, then the type <code>T const</code> need not. This permits ranges that maintain mutable internal state such as an <code>istream_range</code>.</p>
+<p>Consider the performance short-comings of <code>istream_iterator&lt;string&gt;</code>. The iterator reads a string from an <code>istream</code> and must store it internally so it can be returned from <code>operator*</code>. This means that copying an <code>istream_iterator&lt;string&gt;</code> probably incurs a dynamic allocation. Copying iterators is not supposed to be expensive.</p>
+<p>An alternative range-based design would be to define an <code>istream_range</code> class template:</p>
+<pre><code>template&lt;class T&gt;
+class istream_range {
+   T value_;
+   istream * postr_;
+public:
+    class iterator {
+        istream_range * prng_;
+    public:
+        /*...*/
+    };
+    iterator begin() {/*...*/}
+    iterator end() {/*...*/}
+};</code></pre>
+<p>In this design, the cached value lives in the range object, not in the iterator. The iterator merely stores a pointer back to the range. As the iterator is advanced, values are read from the stream and stored in the cache. Since the range object is mutated as it is iterated, it would be a lie to provide const overloads of <code>begin()</code> and <code>end()</code>.</p>
+<p>The need for a range that is mutated in the course of iteration also came up in the design of a <code>view::flatten</code> adaptor that takes a range of ranges, and turns it into a single range. This adapted range also must mutate an internal cache. The adaptor is used to make Ranges monads, and is used in the implementation of <a href="http://ericniebler.com/2014/04/27/range-comprehensions/" title="Range Comprehensions">Range Comprehensions</a><span class="citation">[17]</span>, which are akin to Python’s and Haskell’s List Comprehensions. (That discussion is beyond the scope of this document.)</p>
+<h3 id="range-adaptors-are-lazy-algorithms"><span class="header-section-number">3.3.11</span> Range Adaptors are Lazy Algorithms</h3>
+<p>Consider the example given at the start of paper:</p>
+<pre><code>int total = accumulate(view::iota(1) |
+                       view::transform([](int x){return x*x;}) |
+                       view::take(10), 0);</code></pre>
+<p>The semantics of the adaptors (the things in the <code>view::</code> namespace) are such that computations are only done on demand, when the resulting adapted range is iterated. In this case, the range pipeline expression does no work aside from setting up a computation. Only as <code>accumulate</code> executes is the sequence of integers generated and transformed.</p>
+<p>All adaptors have these lazy semantics. This gives users the ability to reason about the algorithmic complexity of their programs. If an underlying range is transformed and filtered and then passed to an algorithm, users can be certain that the sequence will be traversed exactly once.</p>
+<h3 id="all-algorithms-accept-sentinels-even-if-they-need-an-end-iterator"><span class="header-section-number">3.3.12</span> All Algorithms Accept Sentinels Even If They Need An End Iterator</h3>
+<p>Some algorithms like <code>reverse</code> really need an end iterator to do their job. One option would be to require users to pass an actual end iterator instead of a non-iterator sentinel. The other option is to accept a sentinel and do an O(N) probe for the end first. We opted for the latter option. No such algorithms have complexity better than O(N), so such a probe doesn’t affect the overall algorithmic complexity of the algorithm. And it saves the user the hassle of having to find the end herself before calling the algorithm. In short, it should be possible to <code>reverse</code> a null-terminated string <em>without</em> needing to call <code>strlen</code> first.</p>
+<h3 id="there-is-no-function-signature-to-express-does-not-mutate-the-range-elements"><span class="header-section-number">3.3.13</span> There Is No Function Signature To Express Does-Not-Mutate-The-Range-Elements</h3>
+<p>Raw pointers have an advantage over iterators with regard to the const-correctness of function interfaces; namely, that you can use <code>const</code> to guarantee that the function will not mutate the pointed-to data. Consider:</p>
+<pre><code>// This will not mutate the data
+template&lt;typename T&gt;
+void some_function(const T * data, std::size_t count);</code></pre>
+<p>When we move to iterators, we lose that expressiveness:</p>
+<pre><code>// Will this mutate the data?
+template&lt;typename Iter&gt;
+void some_function(Iter first, Iter last);</code></pre>
+<p>Since the suggested range design is built on top of iterators, it inherits this limitation. Consider what happens when we change to a range-based API with a simple <code>range</code> type like that proposed by <a href="http://www.open-std.org/Jtc1/sc22/wg21/docs/papers/2012/n3350.html" title="A minimal std::range&lt;Iter&gt;">N3350</a><span class="citation">[23]</span>:</p>
+<pre><code>// Accepts a const Range object, but mutates its elements
+template&lt;Iterable Rng&gt;
+void some_function(Rng const &amp; rng) {
+    ++*rng.begin(); // Deeply questionable behavior
+}
+
+template&lt;typename I&gt;
+struct range : pair&lt;I, I&gt; {
+    using pair&lt;I, I&gt;::pair;
+    I begin() const { return this-&gt;first; }
+    I end() const { return this-&gt;second; }
+};
+
+int main() {
+    int arr[] = {1,2,3,4};
+    range&lt;int*&gt; rng{ arr, arr + 3 };
+    some_function(rng); // arr is now {2,2,3,4}
+}</code></pre>
+<p>Keep in mind that the Iterable concept describes types like <code>vector</code> where a top-level const <em>does</em> affect the mutability of the iterable’s elements, as well as simple pair-of-iterator style ranges like <code>range</code> above, where the top-level constness does <em>not</em> affect the elements’ mutabiliy. Concepts Lite doesn’t help, either. Although it’s not hard to write a concept that only matches immutable iterables and use it to constrain an algorithm, it doesn’t solve the problem. See below:</p>
+<pre><code>template&lt;Iterable Rng&gt;
+concept ConstIterable =
+    is_const&lt;remove_reference_t&lt;
+        decltype(*begin(declval&lt;Rng &amp;&gt;()))
+    &gt;&gt;::value;
+
+// This is over-constrained:
+template&lt;ConstIterable Rng&gt;
+void non_mutating_algorithm(Rng const &amp; rng);
+
+int rgi[] = {1,2,3,4};
+range&lt;int *&gt; rng{rgi, rgi+4}; // a pair of mutable iterators
+non_mutating_algorithm(rng); // &lt;== ERROR rng is not a ConstIterable</code></pre>
+<p>The trouble is that the type <code>Rng</code> is deduced as <code>range&lt;int *&gt;</code> which doesn’t satisfy the requirements of the ConstIterable concept. The const in the function signature doesn’t help because it doesn’t change the const-ness of the iterator’s reference type. Even if <code>rng</code> is const, <code>rng.begin()</code> returns an <code>int*</code>. There is no way to write the function signature such that template type deduction works <em>and</em> const-ness is applied deeply to the range’s elements. That’s because such a transformation would necessarily involve a change to the range’s type, and type deduction makes no allowance for arbitrary type transformations during the deduction process.</p>
+<h4 id="but-it-works-for-array_view.-why"><span class="header-section-number">3.3.13.1</span> But it works for <code>array_view</code>. Why?</h4>
+<p><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3851.pdf">N3851</a> proposes an <code>array_view</code> class for the second Library Fundamentals TS. That type allows users to independently specify the mutability of the elements and of the view with the <code>const</code> keyword. From N3851:</p>
+<blockquote>
+<p>A view can be created over an arbitrary <em>value_type</em>, as long as there exists a conversion from the pointer to the underlying collection object type to the pointer to the <em>value_type</em>. This allows to distinguish two levels of constness, analogously to the pointer semantics – the constness of the view and the constness of the data over which the view is defined – see Table 2. Interfaces of both the <em>array_view</em> and the <em>strided_array_view</em> allow for implicit conversions from non-const-qualified views to const-qualified views.</p>
+</blockquote>
+<p>With this scheme, you presumably would be able to pass any Container (defined in N3851 to be arrays and class types with <code>size</code> and <code>data</code> member functions) to an algorithm as follows:</p>
+<pre><code>void some_algorithm( array_view&lt;const int, 1&gt; const &amp; arr );
+
+vector&lt;int&gt; vi {1,2,3,4};
+array_view&lt;int, 1&gt; arr { vi }
+some_algorithm( arr ); // OK!</code></pre>
+<p>In this case, the signature of the algorithm, together with the constructors of <code>array_view</code> and the implicit conversion of <code>int*</code> to <code>const int*</code>, conspire to make <code>some_function</code> guarantee deep-constness.</p>
+<p>If it can work for <code>array_view</code>, why can it not work in general for all Iterables? In other words, is there no range design in which users can put <code>const</code> somewhere in their function signatures to make their algorithms deeply const? The answer, sadly, is no. Even a trivial change to the above signature shows how fragile the <code>array_view</code> design is, and why it cannot be generalized to all range types:</p>
+<pre><code>template&lt;typename T&gt;
+void some_algorithm( array_view&lt;const T, 1&gt; const &amp; arr );
+
+vector&lt;int&gt; rgi{1,2,3,4};
+array_view&lt;int, 1&gt; arr { vi }
+some_algorithm( arr ); // ERROR!</code></pre>
+<p>The compiler cannot figure out what type to pick for <code>T</code> during type deduction, and there’s no way for the author of <code>array_view</code> to give the compiler that guidance.</p>
+<p>When generalized to arbitrary Iterables and Ranges, the problem is further compounded. There is no place to put a second, “deep” <code>const</code> in a signature like below:</p>
+<pre><code>template&lt;Iterable Rng&gt;
+void some_algorithm( Rng const &amp; rng );</code></pre>
+<p>And even if there were, the problem would be the same as for <code>array_view</code>: template type deduction would fail.</p>
+<h4 id="constraints-and-contracts"><span class="header-section-number">3.3.13.2</span> Constraints and contracts</h4>
+<p>There is no clever way around the problem in today’s language, or even with Concepts Lite. This is an artifact of the style of generic programming used in C++: stating constraints on template arguments is significantly different than adding <code>const</code>-ness to a concrete type or template specialization.</p>
+<p>A template’s constraints define part of that template’s contract, and this contract applies not only to the user of that template, but also its implementer. In the earlier example, <code>some_function</code> requires its template arguments to satisfy the requirements of the Iterable concept. Under that contract, the implementation should use only the expressions allowed by the concept on objects whose types are constrained by the concept. In other words, those requirements define a set of expressions and types that are <em>admissible</em> within the template.</p>
+<p>Recall the <code>some_function</code> define above:</p>
+<pre><code>// Accepts a const Range object, but mutates its elements
+template&lt;Iterable Rng&gt;
+void some_function(Rng const &amp; rng) {
+    ++*rng.begin(); // Deeply questionable behavior
+}</code></pre>
+<p>The expression <code>++*rng.begin()</code> invokes not one, but two operations not admitted by the requirements of the Iterable concept:</p>
+<ul>
+<li><code>rng.begin()</code> (which should be <code>using std::begin; begin(rng)</code>), and</li>
+<li><code>++x</code> where <code>x</code> is the object returned by <code>*begin(rng)</code>.</li>
+</ul>
+<p>While this program is syntactically well-formed, and instantiation may even succeed, its behavior would be undefined under the terms of its contract. In other words, the implementation does not conform to its constraints. This is not fundamentally different than using a <code>const_cast</code> to modify the value of a <code>const</code>-qualified function argument: it might work, but the modification invokes undefined behavior.</p>
+<p><em>Every</em> proposed range design will have the same problem. The lack of a library solution to this problem should not hold up a proposal. A work-around is for users to test each algorithm with an archetypal non-mutable iterator, as has been done with the <a href="http://boost.org/libs/concept_check" title="Boost Concept Check Library">Boost Concept Check Library</a><span class="citation">[3]</span>. The standard library could make this task simpler by providing debug archetypal iterators for testing purposes.</p>
+<h3 id="singular-ranges-are-not-empty"><span class="header-section-number">3.3.14</span> Singular Ranges Are Not Empty</h3>
+<p>Ranges are default-constructible. The question is, what can be done with a such a range? Given a Range type <code>R</code> and an object <code>r</code> defined as follows:</p>
+<pre><code>R r;                            // &quot;singular&quot; range
+assert( begin(r) == end(r) );   // Is this OK?</code></pre>
+<p>Default-constructed standard containers are empty. Can we expect the same is true for ranges? No, we cannot. The intention is that a simple pair of iterators may qualify as a valid range. The section [iterator.requirements.general]/5 explains what can be done with singular iterators, and comparing them for equality is not listed as one of the valid operations. Therefore, singular ranges are not “empty”. In terms of EoP, they are partially formed objects that must be assigned to before they can be used <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">8</a>.</p>
+<p>A particular model of the Range concept may choose to provide this guarantee, but it is not required by the Range concept itself and, as such, should not be relied upon.</p>
+<h1 id="concept-definitions"><span class="header-section-number">4</span> Concept Definitions</h1>
+<p>The following concepts are proposed to constrain the standard library. The iterator concepts mentioned here are identical to those specified in <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span> except where specified.</p>
+<h2 id="iterator-concepts"><span class="header-section-number">4.1</span> Iterator Concepts</h2>
+<p>The range concepts presented below build on the following iterator concepts. These are largely as found in <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span>, with the addition of WeakIterator, Iterator, WeakOutputIterator and OutputIterator. The entire hierarchy is presented here for completeness. An important, new concept is:</p>
+<pre><code>concept WeakIterator&lt;typename I&gt; =
+    WeaklyIncrementable&lt;I&gt; &amp;&amp; Copyable&lt;I&gt; &amp;&amp;
+    requires(I i) {
+        { *i } -&gt; auto&amp;&amp;;
+    };</code></pre>
+<p>A WeakIterator is a WeaklyIncrementable type that is both copyable and dereferencable, in addition to being pre-incrementable. The only requirement on the result of dereferencing the iterator is that its type can be deduced from <code>auto&amp;&amp;</code>. Effectively, the result of dereferencing shall not be <code>void</code>. The WeakIterator concept allows iterator adaptors to provide a dereferencing operator for both InputIterators and OutputIterators.</p>
+<p>This concept is refined by the addition of either Readable or Writable, which allow reading from and writing to a dereferenced iterator, respectively. The Iterator and WeakIterator also obviate the need for separate InputRange and OutputRange concepts (as we see later).</p>
+<pre><code>concept Iterator&lt;typename I&gt; =
+    WeakIterator&lt;I&gt; &amp;&amp; EqualityComparable&lt;I&gt;;
+
+concept WeakOutputIterator&lt;typename I, typename T&gt; =
+    WeakIterator&lt;I&gt; &amp;&amp; Writable&lt;I, T&gt;;
+
+concept OutputIterator&lt;typename I, typename T&gt; =
+    WeakOutputIterator&lt;I&gt; &amp;&amp; EqualityComparable&lt;I&gt;;</code></pre>
+<p>N3351 does not define WeakOutputIterator or OutputIterator, preferring instead to define all the algorithms in terms of WeaklyIncrementable and (separately) Writable. We see no disadvantage to rolling these two into the familiar (Weak)OutputIterator concept as a convenience; it saves typing.</p>
+<p>The WeakInputIterator concept defines requirements for a type whose referred to values can be read (from the requirement for Readable) and which be both pre- and post-incremented. However, WeakInputIterators are not required to be compared for equality. There are a number of algorithms whose input ranges are defined by the equality of comparison of another input range (e.g., <code>std::mismatch</code> and <code>std::equal</code>).</p>
+<pre><code>concept WeakInputIterator&lt;WeakIterator I&gt; =
+    Readable&lt;I&gt; &amp;&amp;
+    requires(I i) {
+        typename IteratorCategory&lt;I&gt;;
+        { i++ } -&gt; Readable;
+        requires Derived&lt;IteratorCategory&lt;I&gt;, weak_input_iterator_tag&gt;;
+    };</code></pre>
+<p>An InputItreator is a WeakInputIterator that can be compared for equality comparison. This concept defines the basic requirements for a very large number of the algorithm in the standard library.</p>
+<pre><code>concept InputIterator&lt;typename I&gt; =
+    WeakInputIterator&lt;I&gt; &amp;&amp; 
+    EqualityComparable&lt;I&gt; &amp;&amp;
+    Derived&lt;IteratorCategory&lt;I&gt;, input_iterator_tag&gt;;</code></pre>
+<p>The ForwardIterator concept refines the InputIterator concept, but the refinement is <em>semantic</em>. It guarantees the “multipass” property: it allows multiple iterations of a range of elements. This is something that cannot be done with, say, an <code>istream_iterator</code>. The current element is consumed when the iterator is incremented.</p>
+<pre><code>concept ForwardIterator&lt;typename I&gt; =
+    InputIterator&lt;I&gt; &amp;&amp;
+    Incrementable&lt;I&gt; &amp;&amp;
+    Derived&lt;IteratorCategory&lt;I&gt;, forward_iterator_tag&gt;;</code></pre>
+<p>The BidirectionalIterator concept refines the ForwardIterator concept, and allows both incrementing and decrementing.</p>
+<pre><code>concept BidirectionalIterator&lt;typename I&gt; =
+    ForwardIterator&lt;I&gt; &amp;&amp;
+    Derived&lt;IteratorCategory&lt;I&gt;, bidirectional_iterator_tag&gt; &amp;&amp;
+    requires decrement (I i, I j) {
+        { ––i } -&gt; I&amp;;
+        { i–– } -&gt; I;
+    };</code></pre>
+<p>The RandomAccess concept refines the BidirectionalIterator concept and provides support for constant-time advancement using <code>+=</code>, <code>+</code>, and <code>-=</code>, and the computation of distance in constant time using <code>-</code>. Random access iterators also support array notation via subscripting.</p>
+<pre><code>concept RandomAccessIterator&lt;typename I&gt; =
+    BidirectionalIterator&lt;I&gt; &amp;&amp;
+    TotallyOrdered&lt;I&gt; &amp;&amp;
+    Derived&lt;IteratorCategory&lt;I&gt;, random_access_iterator_tag&gt; &amp;&amp;
+    SignedIntegral&lt;DistanceType&lt;I&gt;&gt; &amp;&amp;
+    SizedIteratorRange&lt;I, I&gt; &amp;&amp; // see below
+    requires advance (I i, I j, DifferenceType&lt;I&gt; n) {
+        { i += n } -&gt; I&amp;;
+        { i + n } -&gt; I;
+        { n + i } -&gt; I;
+        { i –= n } -&gt; I&amp;;
+        { i – n } -&gt; I;
+        { i[n] } -&gt; ValueType&lt;I&gt;;
+    };</code></pre>
+<h2 id="iterator-range-concepts"><span class="header-section-number">4.2</span> Iterator Range Concepts</h2>
+<p>The IteratorRange concept defines a pair of types (an Iterator and a Sentinel), that can be compared for equality. This concept is the key that allows iterator ranges to be defined by pairs of types that are not the same.</p>
+<pre><code>concept IteratorRange&lt;typename I, typename S&gt; =
+    Iterator&lt;I&gt; &amp;&amp;
+    Regular&lt;S&gt; &amp;&amp;
+    EqualityComparable&lt;I, S&gt;;</code></pre>
+<p>The SizedIteratorRange allows the use of the <code>-</code> operator to compute the distance between to an Iterator and a Sentinel.</p>
+<pre><code>concept SizedIteratorRange&lt;typename I, typename S&gt; =
+    IteratorRange&lt;I, S&gt; &amp;&amp;
+    requires difference (I i, S j) {
+        typename Distance_type&lt;I&gt;;
+        { i - i } -&gt; Distance_type&lt;I&gt;;
+        { j - j } -&gt; Distance_type&lt;I&gt;;
+        { i - j } -&gt; Distance_type&lt;I&gt;;
+        { j - i } -&gt; Distance_type&lt;I&gt;;
+        requires SignedIntegral&lt;DifferenceType&gt;;
+    };</code></pre>
+<h2 id="iterable-concepts"><span class="header-section-number">4.3</span> Iterable Concepts</h2>
+<p>This proposal introduces a new concept for describing the requirements on algorithms that require access to the <code>begin</code> and <code>end</code> of a Range or Container.</p>
+<pre><code>concept Iterable&lt;typename T&gt; =
+    requires(T t) {
+        typename IteratorType&lt;T&gt;;
+        typename SentinelType&lt;T&gt;;
+        { begin(t) } -&gt; IteratorType&lt;T&gt;;
+        { end(t) } -&gt; SentinelType&lt;T&gt;;
+        requires IteratorRange&lt;IteratorType, SentinelType&gt;;
+    }</code></pre>
+<p>The Iterable concept requires two associated operations: <code>begin</code>, and <code>end</code>. Note that the return types of these operations are not required to be the same. The names of those return types are <code>IteratorType&lt;T&gt;</code> and <code>SentinelType&lt;T&gt;</code>, respectively. Furthermore, that pair of types must satisfy the requirements of the IteratorRange concept defined in the previous section.</p>
+<p>Iterable types have no other requirements. Most algorithms requiring this concept simply forward to an Iterator-based algorithm by calling <code>begin</code> and <code>end</code>.</p>
+<p>The Range concept refines the Iterable concept and defines a view on a range of elements that it does not own.</p>
+<pre><code>concept Range&lt;typename T&gt; =
+    Iterable&lt;T&gt; &amp;&amp; Semiregular&lt;T&gt; &amp;&amp; is_range&lt;T&gt;::value;</code></pre>
+<p>A possible implementation of the <code>is_range</code> predicate is shown below.</p>
+<pre><code>// For exposition only:
+struct range_base
+{};
+
+concept ContainerLike&lt;Iterable T&gt; =
+    !Same&lt;decltype(*begin(declval&lt;T &amp;&gt;())),
+          decltype(*begin(declval&lt;T const &amp;&gt;()))&gt;;
+
+// For exposition only:
+template&lt;typename T&gt;
+struct is_range_impl_
+  : std::integral_constant&lt;
+        bool,
+        Iterable&lt;T&gt; &amp;&amp; (!ContainerLike&lt;T&gt; || Derived&lt;T, range_base&gt;)
+    &gt;
+{};
+
+// Specialize this if the default is wrong.
+template&lt;typename T, typename Enable = void&gt;
+struct is_range
+  : conditional&lt;
+        is_same&lt;T, remove_const_t&lt;remove_reference_t&lt;T&gt;&gt;&gt;::value,
+        is_range_impl_&lt;T&gt;,
+        is_range&lt;remove_const_t&lt;remove_reference_t&lt;T&gt;&gt;&gt;
+    &gt;::type
+{};</code></pre>
+<p>Note that the “multipass” property–the property that guarantees that you can iterate the same range twice, accessing the same objects in each pass–is guaranteed by the <code>forward_iterator_tag</code> class. That is, any iterator having whose iterator category is derived from that tag class is required to be a multipass iterator.</p>
+<h2 id="sized-iterable-concepts"><span class="header-section-number">4.4</span> Sized Iterable Concepts</h2>
+<p>The <code>SizedIterable</code> concept exists for the same reasons as <code>SizedIteratorRange</code>. There are some iterables that, though they are not random-access, know their size in O(1). A prime example is <code>std::list</code>. Another example is a counted view (i.e., a range specified by an iterator and a count). Some algorithms can select a better implementation when the size of the range is known, even if the iterators don’t allow random access. (One example is a <code>search</code> algorithm that knows to stop searching when there is no longer room in the input sequence for the pattern to match.)</p>
+<pre><code>// For exposition only:
+concept SizedIterableLike&lt;Iterable R&gt; =
+    requires(R r) {
+        typename SizeType&lt;R&gt;;
+        { size(r) } -&gt; SizeType&lt;R&gt;; // ADL customization point
+        requires Integral&lt;SizeType&gt;;
+    }
+
+concept SizedIterable&lt;SizedIterableLike R&gt; =
+    is_sized_iterable&lt;R&gt;::value;</code></pre>
+<p>Like <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4017.htm" title="Non-member size() and more">N4017</a><span class="citation">[10]</span>, we propose <code>size(r)</code> as a customization point for accessing the size of an Iterable. A SizedIterable requires that <code>size(r)</code> returns the same value as <code>distance(begin(r), end(r))</code> (module a possible change in the signed-ness of the Integral type). As in N4017, we suggest <code>size</code> overloads in <code>std::</code> for arrays and for class types with a <code>size()</code> member.</p>
+<p>In recognition of the fact that nominal conformance to a concept is insufficiently fine-grained, the SizedIterable concept is defined in terms of a <code>is_sized_iterable</code> trait. This is to give users explicit control in the case of accidental conformance with the syntactic requirements of the concept. A possible default implementation of the <code>is_sized_iterable</code> trait is shown below.</p>
+<pre><code>// For exposition only:
+template&lt;typename R&gt;
+struct is_sized_iterable_impl_
+  : std::integral_constant&lt;
+        bool,
+        SizedIterableLike&lt;R&gt;
+    &gt;
+{};
+
+// Specialize this if the default is wrong.
+template&lt;typename R&gt;
+struct is_sized_iterable
+  : conditional&lt;
+        is_same&lt;R, remove_const_t&lt;remove_reference_t&lt;R&gt;&gt;&gt;::value,
+        is_sized_iterable_impl_&lt;R&gt;,
+        is_sized_iterable&lt;remove_const_t&lt;remove_reference_t&lt;R&gt;&gt;&gt;
+    &gt;::type
+{};</code></pre>
+<h1 id="technical-specifications"><span class="header-section-number">5</span> Technical Specifications</h1>
+<p>This section is intentionally left blank.</p>
+<h1 id="future-directions"><span class="header-section-number">6</span> Future Directions</h1>
+<p>More work is necessary to get ranges into the standard. Subsequent proposals will recommend specific components for standardization as described in <a href="#impact-on-the-standard">Impact on the Standard</a>. In addition, below are some additional areas that are currently open for research.</p>
+<ul>
+<li>Range extensions to things like regex. Make it work with null-terminated strings, e.g..</li>
+<li>Discuss the pros and cons of tying this work with work on a concept-ified standard library (aka Concepts Lite TS2).</li>
+<li>Discuss the pros and cons of making this (and the concept-ified standard library) <em>strictly</em> backwards compatible, versus delivering the new, conceptified and range-ified standard library in a separate, versioned namespace (and what such a solution should look like).</li>
+<li>Discuss how an extension to the Concepts Lite proposal, implicit conversion to concept, bears on the Iterable/Range concepts and the way the algorithms are constrained. Also discuss how it can give a syntax to express “this function does not mutate the range elements.”</li>
+<li>Assess the impact of allowing ForwardIterators to return proxies.</li>
+<li>Consider integrating ContiguousIterator from <a href="https://isocpp.org/files/papers/n4132.html" title="Contiguous Iterators">N4132</a><span class="citation">[11]</span></li>
+</ul>
+<h1 id="acknowledgements"><span class="header-section-number">7</span> Acknowledgements</h1>
+<p>I would like to give special thanks to Sean Parent for his advice and feedback on early designs of the range library on which this proposal is based, in addition to his work on the <a href="http://stlab.adobe.com/" title="Adobe Source Libraries">Adobe Source Libraries</a><span class="citation">[1]</span> from which this proposal has borrowed liberally.</p>
+<p>Also deserving of special thanks is Andrew Sutton. His work on Concepts Lite and on the formulations of the algorithms as specified in <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span> has proven invaluable, and he has generously donated his time and expertise to expound on the ideas there and improve the quality of this proposal.</p>
+<p>Chandler Carruth has also helped more than he probably knows. I am indebted to him for his support and perspective.</p>
+<p>I would be remiss if I didn’t acknowledge the foundational work of all the people whose ideas and sweat have gone into various range libraries and proposals in the past. They are too many to list, but I certainly benefited from the work of Dave Abrahams, Dietmar Kühl, Neil Groves, Thorsten Ottosen, Arno Schoedl, Daniel Walker, and Jeremy Seik. Neil Groves also submitted a particularly extensive review of this document.</p>
+<p>Of course none of this work would be possible without Alex Stepanov’s giant leap forward with the STL, or without Bjarne Stroustrup who gave Alex the instrument he needed to most clearly realize his vision.</p>
+<h1 id="references"><span class="header-section-number">8</span> References</h1>
+<div class="references">
+<p>[1] Adobe Source Libraries: <em><a href="http://stlab.adobe.com" class="uri">http://stlab.adobe.com</a></em>. Accessed: 2014-10-08.</p>
+<p>[2] Austern, M. 2000. Segmented Iterators and Hierarchical Algorithms. <em>Selected Papers from the International Seminar on Generic Programming</em> (2000), 80–90.</p>
+<p>[3] Boost Concept Check Library: <em><a href="http://boost.org/libs/concept_check" class="uri">http://boost.org/libs/concept_check</a></em>. Accessed: 2014-10-08.</p>
+<p>[4] Boost.Range Library: <em><a href="http://boost.org/libs/range" class="uri">http://boost.org/libs/range</a></em>. Accessed: 2014-10-08.</p>
+<p>[5] Clang Modernize: <em><a href="http://clang.llvm.org/extra/clang-modernize.html" class="uri">http://clang.llvm.org/extra/clang-modernize.html</a></em>. Accessed: 2014-10-08.</p>
+<p>[6] D Phobos std.range: <em><a href="http://dlang.org/phobos/std_range.html" class="uri">http://dlang.org/phobos/std_range.html</a></em>. Accessed: 2014-10-08.</p>
+<p>[7] Debug info: Support fragmented variables: <em><a href="http://reviews.llvm.org/D2680" class="uri">http://reviews.llvm.org/D2680</a></em>. Accessed: 2014-10-08.</p>
+<p>[8] Dietmar, K. and Abrahams, D. 2005. N1873: The Cursor/Property Map Abstraction.</p>
+<p>[9] libc++ C++ Standard Library: <em><a href="http://libcxx.llvm.org/" class="uri">http://libcxx.llvm.org/</a></em>. Accessed: 2014-10-08.</p>
+<p>[10] Marcangelo, R. 2014. N4017: Non-member size() and more.</p>
+<p>[11] Maurer, J. 2014. N4132: Contiguous Iterators.</p>
+<p>[12] Muchnick, S. 1997. Advanced Compiler Design Implementation. Morgan Kaufmann.</p>
+<p>[13] New Iterator Concepts: <em><a href="http://www.boost.org/libs/iterator/doc/new-iter-concepts.html" class="uri">http://www.boost.org/libs/iterator/doc/new-iter-concepts.html</a></em>. Accessed: 2014-10-08.</p>
+<p>[14] NTCTS Iterator: <em><a href="https://github.com/Beman/ntcts_iterator" class="uri">https://github.com/Beman/ntcts_iterator</a></em>. Accessed: 2014-10-08.</p>
+<p>[15] Parent, S. 2013. C++ Seasoning. <em>GoingNative 2013</em>.</p>
+<p>[16] Position-Based Ranges: <em><a href="https://github.com/Bekenn/range" class="uri">https://github.com/Bekenn/range</a></em>. Accessed: 2014-10-08.</p>
+<p>[17] Range Comprehensions: <em><a href="http://ericniebler.com/2014/04/27/range-comprehensions/" class="uri">http://ericniebler.com/2014/04/27/range-comprehensions/</a></em>. Accessed: 2014-10-08.</p>
+<p>[18] Range v3: <em><a href="http://www.github.com/ericniebler/range-v3" class="uri">http://www.github.com/ericniebler/range-v3</a></em>. Accessed: 2014-10-08.</p>
+<p>[19] Schödl, A. and Fracassi, F. 2013. N3782: Index-Based Ranges.</p>
+<p>[20] Stepanov, A. and McJones, P. 2009. <em>Elements of Programming</em>. Addison-Wesley Professional.</p>
+<p>[21] Stroustrup, B. and Sutton, A. 2012. N3351: A Concept Design for the STL.</p>
+<p>[22] Universal References in C++11: <em><a href="http://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers" class="uri">http://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers</a></em>. Accessed: 2014-10-08.</p>
+<p>[23] Yasskin, J. 2012. N3350: A minimal std::range<Iter>.</p>
+</div>
+<h1 id="appendix-1-sentinels-and-code-generation"><span class="header-section-number">9</span> Appendix 1: Sentinels and Code Generation</h1>
+<p>In this appendix we explore the effect of sentinels on code generation. I’ll show that allowing the type of the end iterator to differ from the begin can have a positive effect on the performance of algorithms. First, I’ll note that nothing that can be done with sentinels cannot also be done with appropriately designed end iterators. Here, for instance, is the code for an iterator that can be used to adapt a null-terminated string to the STL. It is implemented with the help of the Boost.Iterators library:</p>
+<pre><code>#include &lt;cassert&gt;
+#include &lt;iostream&gt;
+#include &lt;boost/iterator/iterator_facade.hpp&gt;
+
+struct c_string_range
+{
+private:
+    char const *str_;
+public:
+    using const_iterator = struct iterator
+      : boost::iterator_facade&lt;
+            iterator
+          , char const
+          , std::forward_iterator_tag
+        &gt;
+    {
+    private:
+        friend class boost::iterator_core_access;
+        friend struct c_string_range;
+        char const * str_;
+        iterator(char const * str)
+          : str_(str)
+        {}
+        bool equal(iterator that) const
+        {
+            return str_
+                ? (that.str_ == str_ ||
+                     (!that.str_ &amp;&amp; !*str_))
+                : (!that.str_ || !*that.str_);
+        }
+        void increment()
+        {
+            assert(str_ &amp;&amp; *str_);
+            ++str_;
+        }
+        char const&amp; dereference() const
+        {
+            assert(str_ &amp;&amp; *str_);
+            return *str_;
+        }
+    public:
+        iterator()
+          : str_(nullptr)
+        {}
+    };
+    c_string_range(char const * str)
+      : str_(str)
+    {
+        assert(str_);
+    }
+    iterator begin() const
+    {
+        return iterator{str_};
+    }
+    iterator end() const
+    {
+        return iterator{};
+    }
+    explicit operator bool() const
+    {
+        return !!*str_;
+    }
+};
+
+int c_strlen(char const *sz)
+{
+    int i = 0;
+    for(; *sz; ++sz)
+        ++i;
+    return i;
+}
+
+int range_strlen(
+    c_string_range::iterator begin,
+    c_string_range::iterator end)
+{
+    int i = 0;
+    for(; begin != end; ++begin)
+        ++i;
+    return i;
+}</code></pre>
+<p>The code traverses the sequence of characters without first computing its end. It does it by creating a dummy end iterator such that any time a real iterator is compared to it, it checks to see if the real iterator points to the null terminator. All the comparison logic is in the <code>c_string_range::iterator::equal</code> member function.</p>
+<p>The functions <code>c_strlen</code> and <code>range_strlen</code> implement equivalent procedures for computing the length of a string, the first using raw pointers and a check for the null terminator, the second using <code>c_string_range</code>’s STL iterators. The resulting optimized assembly code (clang 3.4 -O3 -DNDEBUG) generated for the two functions highlights the lost optimization opportunities.</p>
+<table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" width="607">
+<tr><td><pre><code>c_strlen</code></pre></td><td><pre><code>range_strlen</code></pre></td></tr>
+<tr><td valign="top"><pre><code>    pushl   %ebp
+    movl    %esp, %ebp
+    movl    8(%ebp), %ecx
+    xorl    %eax, %eax
+    cmpb    $0, (%ecx)
+    je      LBB1_3
+    xorl    %eax, %eax
+    .align  16, 0x90
+LBB1_2:
+    cmpb    $0, 1(%ecx,%eax)
+    leal    1(%eax), %eax
+    jne     LBB1_2
+LBB1_3:
+    popl    %ebp
+    ret</code></pre></td><td><pre><code>    pushl   %ebp
+    movl    %esp, %ebp
+    pushl   %esi
+    leal    8(%ebp), %ecx
+    movl    12(%ebp), %esi
+    xorl    %eax, %eax
+    testl   %esi, %esi
+    movl    8(%ebp), %edx
+    jne     LBB2_4
+    jmp     LBB2_1
+    .align  16, 0x90
+LBB2_8:
+    incl    %eax
+    incl    %edx
+    movl    %edx, (%ecx)
+LBB2_4:
+    testl   %edx, %edx
+    jne     LBB2_5
+    cmpb    $0, (%esi)
+    jne     LBB2_8
+    jmp     LBB2_6
+    .align  16, 0x90
+LBB2_5:
+    cmpl    %edx, %esi
+    jne     LBB2_8
+    jmp     LBB2_6
+    .align  16, 0x90
+LBB2_3:
+    leal    1(%edx,%eax), %esi
+    incl    %eax
+    movl    %esi, (%ecx)
+LBB2_1:
+    movl    %edx, %esi
+    addl    %eax, %esi
+    je      LBB2_6
+    cmpb    $0, (%esi)
+    jne     LBB2_3
+LBB2_6:
+    popl    %esi
+    popl    %ebp
+    ret</code></pre></td></tr>
+</table>
+<p>Code like <code>c_string_range</code> exists in the wild; for instance, see <a href="https://github.com/Beman/ntcts_iterator" title="ntcts_iterator">Beman Dawes’ <code>ntcts_iterator</code></a><span class="citation">[14]</span>. But more typically, when users want to use an STL algorithm on a C-style string, they call <code>strlen</code> to find the end first (this is what the standard regex algorithms do when passed C-style strings). That traverses the string an extra time needlessly. Also, such a trick is not possible for input sequences like those traversed by <code>std::istream_iterator</code> that consume their input.</p>
+<p>Rather than mocking up a dummy end iterator with a computationally expensive equality comparison operation, we can use a sentinel type that encodes end-ness in its type. Below is an example from the <a href="http://www.github.com/ericniebler/range-v3" title="Range v3">Range-v3 library</a><span class="citation">[18]</span>, which uses a <code>range_facade</code> class template to generate iterators and sentinels from a simple range-like interface:</p>
+<pre><code>using namespace ranges;
+struct c_string_iterable
+  : range_facade&lt;c_string_iterable&gt;
+{
+private:
+    friend range_access;
+    char const *sz_;
+    char const &amp; current() const { return *sz_; }
+    void next() { ++sz_; }
+    bool done() const { return *sz_ == 0; }
+    bool equal(c_string_iterable const &amp;that) const
+    { return sz_ == that.sz_; }
+public:
+    c_string_iterable() = default;
+    c_string_iterable(char const *sz)
+        : sz_(sz) {}
+};
+
+// Iterable-based
+int iterable_strlen(
+    range_iterator_t&lt;c_string_iterable&gt; begin,
+    range_sentinel_t&lt;c_string_iterable&gt; end)
+{
+    int i = 0;
+    for(; begin != end; ++begin)
+        ++i;
+    return i;
+}</code></pre>
+<p>The assembly generated for <code>iterable_strlen</code> is nearly identical to that for the hand-coded <code>c_strlen</code>:</p>
+<table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse" bordercolor="#111111" width="607">
+<tr><td><pre><code>c_strlen</code></pre></td><td><pre><code>iterable_strlen</code></pre></td></tr>
+<tr><td valign="top"><pre><code>    pushl   %ebp
+    movl    %esp, %ebp
+    movl    8(%ebp), %ecx
+    xorl    %eax, %eax
+    cmpb    $0, (%ecx)
+    je      LBB1_3
+    xorl    %eax, %eax
+    .align  16, 0x90
+LBB1_2:
+    cmpb    $0, 1(%ecx,%eax)
+    leal    1(%eax), %eax
+    jne     LBB1_2
+
+
+LBB1_3:
+    popl    %ebp
+    ret</code></pre></td><td><pre><code>    pushl   %ebp
+    movl    %esp, %ebp
+    movl    8(%ebp), %ecx
+    xorl    %eax, %eax
+    cmpb    $0, (%ecx)
+    je      LBB1_4
+    leal    8(%ebp), %edx
+    .align  16, 0x90
+LBB1_2:
+    cmpb    $0, 1(%ecx,%eax)
+    leal    1(%eax), %eax
+    jne     LBB1_2
+    addl    %eax, %ecx
+    movl    %ecx, (%edx)
+LBB1_4:
+    popl    %ebp
+    ret</code></pre></td></tr>
+</table>
+<p>The generated code for <code>iterable_strlen</code> is better than for <code>range_strlen</code> because the sentinel has a different type than the iterator, so that the expression <code>begin != end</code> can be optimized into <code>*begin == 0</code>. In <code>range_strlen</code>, <code>begin == end</code> is comparing two objects of the same type, and since either <code>begin</code> or <code>end</code> could be a sentinel – or both, or neither – the compiler can’t elide the extra checks without extra information from the surrounding calling context, which isn’t always available; hence, the worse code gen.</p>
+<p>In addition to the performance impact, the complexity of implementing a correct <code>operator==</code> for an iterator with a dummy sentinel can present problems. Chandler Carruth reports that such comparison operators have been a rich source of bugs for Google.</p>
+<h1 id="appendix-2-sentinels-iterators-and-the-cross-type-equalitycomparable-concept"><span class="header-section-number">10</span> Appendix 2: Sentinels, Iterators, and the Cross-Type EqualityComparable Concept</h1>
+<p>This appendix describes the theoretical justification for sentinels from the perspective of the STL concepts as set out in <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span>. In that paper, the foundational concept EqualityComparable is described in depth, not only its syntactic constraints but also its semantic axioms. It is not enough that the syntax <code>a == b</code> compiles. It has to be a meaningful comparison. Here I explain why I believe it is meaningful to compare an iterator with a sentinel of a different type for equality.</p>
+<p>In the expression <code>x == y</code>, where <code>x</code> and <code>y</code> have different types, the EqualityComparable concept requires that the types of both <code>x</code> and <code>y</code> must themselves be EqualityComparable, and there must be a common type to which they can both be converted, and that type must also be EqualityComparable. Think of comparing a <code>char</code> with a <code>short</code>. It works because both <code>char</code> and <code>short</code> are EqualityComparable, and because they can both be converted to an <code>int</code> which is also EqualityComparable.</p>
+<p>Iterators are comparable, and sentinels are trivially comparable (they always compare equal). The tricky part is the common type requirement. Logically, every iterator/sentinel pair has a common type that can be constructed as follows: assume the existence of a new iterator type <code>I</code> that is a tagged union that contains <em>either</em> an iterator <em>or</em> a sentinel. When an iterator is compared to a sentinel, it behaves semantically as if both the iterator and the sentinel were first converted to two objects of type <code>I</code> — call them <code>lhs</code> and <code>rhs</code> — and then compared according to the following truth table:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">LHS IS SENTINEL ?</th>
+<th align="left">RHS IS SENTINEL ?</th>
+<th align="left">LHS == RHS ?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>true</code></td>
+<td align="left"><code>true</code></td>
+<td align="left"><code>true</code><sup><a href="#sentinel-equality" title="Sentinel Equality"><br /><span class="math"> * </span><br /></a></sup></td>
+</tr>
+<tr class="even">
+<td align="left"><code>true</code></td>
+<td align="left"><code>false</code></td>
+<td align="left"><code>done(rhs.iter)</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>false</code></td>
+<td align="left"><code>true</code></td>
+<td align="left"><code>done(lhs.iter)</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>false</code></td>
+<td align="left"><code>false</code></td>
+<td align="left"><code>lhs.iter == rhs.iter</code></td>
+</tr>
+</tbody>
+</table>
+<p>In <a href="#appendix-1-sentinels-and-code-generation">Appendix 1</a>, there is an implementation of <code>c_string_range</code> whose iterator’s <code>operator==</code> is a procedure for evaluating this truth table. That’s no coincidence; that was a special case of this more general construction.</p>
+<p>In summary, for every iterator/sentinel pair, we can construct a common iterator type that implements an equivalent procedure for computing equality. The existence of this common type is what allows iterator/sentinel pairs to satisfy the EqualityComparable requirement.</p>
+<p>As a final note, the Range v3 library has a general implementation of this common iterator type as a parametrized type, and appropriate specializations of <code>std::common_type</code> that allow the constrained algorithms to type-check correctly. It works well in practice, both for the purpose of type-checking the algorithms and for adapting ranges with iterator/sentinel pairs to old code that expects the begin and end of a range to have the same type.</p>
+<h2 id="sentinel-equality"><span class="header-section-number">10.1</span> Sentinel Equality</h2>
+<p>The first line of table above shows that sentinels always compare equal – regardless of their state. This can seem unintuitive in some situations. For instance:</p>
+<pre><code>auto s = &quot;Hello World!?&quot;;
+// Hypothetical range-like facilities for exposition only:
+auto r1 = make_range( &amp;s[0], equal_to(&#39;!&#39;) );
+auto r2 = make_range( &amp;s[0], equal_to(&#39;?&#39;) );
+// &#39;end()&#39; returns each &#39;equal_to&#39; sentinel object:
+assert(r1.end() == r2.end() &amp;&amp; &quot;really?&quot;);</code></pre>
+<p>In the above example, it’s clear that <code>r1.end()</code> and <code>r2.end()</code> are refering to different elements, and that’s reflected in their having different state. So shouldn’t sentinel equality be a stateful comparison?</p>
+<p>It’s incorrect to think of sentinels as objects whose position is determined by their value. Thinking that way leads to logical inconsistencies. It’s not hard to define sentinels that – if you consider their state during comparison – compare equal when they represent a different position, and not equal when they represent the same position. Consider:</p>
+<pre><code>auto s = &quot;hello! world!&quot;;
+auto r1 = make_range( &amp;s[0], equal_to(&#39;!&#39;) );
+auto r2 = make_range( &amp;s[7], equal_to(&#39;!&#39;) );
+
+assert(r1.end() == r2.end() &amp;&amp; &quot;really?&quot;);</code></pre>
+<p>In the above code, although the sentinels have the same type and the same state, they refer to different elements.</p>
+<p>Also imagine a counted iterator that stores an underlying iterator and a count that starts at zero. It’s paired with a sentinel that contains an ending count:</p>
+<pre><code>auto s = &quot;hello&quot;;
+// Hypothetical range-like facilities for exposition only:
+auto r1 = make_range( counting(&amp;s[0]), end_count(5) );
+auto r2 = make_range( counting(&amp;s[1]), end_count(4) );
+
+assert(r1.end() != r2.end() &amp;&amp; &quot;really?&quot;);</code></pre>
+<p>The end sentinels have the same type and different state, but they refer to the same element.</p>
+<p>The question then is: What does it <em>mean</em> to compare sentinels for equality? The meaning has to be taken from the context in which the operation appears. In that context – the algorithms – the sentinel is one of two positions denoting a range.</p>
+<p>Iterator comparison is a position comparison. A sentinel, when it’s paired with an iterator as in the algorithms, denotes a unique position. Since iterators must be valid sentinels, comparing sentinels should also be a position comparison. In this context, sentinels always represent the same position – the end – even though that position is not yet know. Hence, sentinels compare equal always, without any need to consider state. Anything else yields results that are inconsistent with the use of iterators to denote the end of a range.</p>
+<p>What about the examples above where sentinel comparison seems to give nonsensical results? In those examples, we are expecting sentinels to have meaning outside of their valid domain – when they are considered in isolation of their paired iterator. It is the paired iterator that give the sentinel its “unique-position-ness”, so we shouldn’t expect an operation that compares position to make sense on an object that is not capable of representing a position by itself.</p>
+<h1 id="appendix-3-d-ranges-and-algorithmic-complexity"><span class="header-section-number">11</span> Appendix 3: D Ranges and Algorithmic Complexity</h1>
+<p>As currently defined, D’s ranges make it difficult to implement algorithms over bidirectional sequences that take a position in the middle as an argument. A good example is a hypothetical <code>is_word_boundary</code> algorithm. In C++ with iterators, it might look like this:</p>
+<pre><code>template&lt; BidirectionalIterator I &gt;
+void is_word_boundary( I begin, I middle, I end )
+{
+    bool is_word_prev = middle == begin ? false : isword(*prev(middle));
+    bool is_word_this = middle == end ? false : isword(*middle);
+    return is_word_prev != is_word_this;
+}</code></pre>
+<p>Users might call this in a loop to find the first word boundary in a range of characters as follows:</p>
+<pre><code>auto i = myrange.begin();
+for( ; i != myrange.end(); ++i )
+    if( is_word_boundary( myrange.begin(), i, myrange.end() ) )
+        break;</code></pre>
+<p>The question is how such an API should be designed in D, since D doesn’t have iterators. In a private email exchange, Andrei Alexandrescu, the designer of D’s range library, described this potential implementation (the detailed implementation is ours):</p>
+<pre><code>bool is_word_boundary(Range1, Range2)( Range1 front, Range2 back )
+    if (isBidirectionalRange!Range1 &amp;&amp; isInputRange!Range2 )
+{
+    bool is_word_prev = front.empty ? false : isword(front.back);
+    bool is_word_this = back.empty ? false : isword(back.front);
+    return is_word_prev != is_word_this;
+}
+
+range r = myrange;
+size_t n = 0;
+for(range r = myrange; !r.empty; r.popFront(), ++n)
+     if( is_word_boundary( takeExactly(myrange, n), r) )
+        break;</code></pre>
+<p>This example uses D’s <code>takeExactly</code> range adaptor. <code>takeExactly</code> is like Haskell’s <code>take</code> function which creates a list from another list by taking the first <code>n</code> elements, but <code>takeExactly</code> requires that the input range has at least <code>n</code> elements begin with.</p>
+<p>The trouble with the above implementation is that <code>takeExactly</code> demotes Bidirectional ranges to Forward ranges. For eample, taking the first <em>N</em> elements of a linked list cannot give access to the final element in O(1). So the <code>for</code> loop is trying to pass a Forward range to an algorithm that clearly requires a Bidirectional range. The only fix is to loosen the requirements of <code>Range1</code> to be Forward. To do that, the implementation of <code>is_word_boundary</code> needs to change so that, when it is passed a Forward range, it walks to the end of the <code>front</code> range and tests the last character. Obviously, that’s an O(N) operation.</p>
+<p>In other words, by converting the <code>is_word_boundary</code> from iterators to D-style ranges, the algorithm goes from O(1) to O(N). From this we draw the following conclusion: D’s choice of algorithmic <em>basis operations</em> is inherently less efficient than C++’s.</p>
+<h1 id="appendix-4-on-counted-ranges-and-efficiency"><span class="header-section-number">12</span> Appendix 4: On Counted Ranges and Efficiency</h1>
+<p>The three types of ranges that we would like the Iterable concept to be able to efficiently model are:</p>
+<ol>
+<li>Two iterators</li>
+<li>An iterator and a predicate</li>
+<li>An iterator and a count</li>
+</ol>
+<p>The Iterator/Sentinel abstraction is what makes it possible for the algorithms to handle these three cases with uniform syntax. However, the third option presents challenges when trying to make some algorithms optimally efficient.</p>
+<p>Counted ranges, formed by specifying a position and a count of elements, have iterators – as all Iterables do. The iterators of a counted range must know the range’s extent and how close they are to reaching it. Therefore, the counted range’s iterators must store both an iterator into the underlying sequence and a count – either a count to the end or a count from the front. Here is one potential design:</p>
+<pre><code>class counted_sentinel
+{};
+
+template&lt;WeakIterator I&gt;
+class counted_iterator
+{
+    I it_;
+    DistanceType&lt;I&gt; n_; // distance to end
+public:
+    // ... constructors...
+    using iterator_category =
+        typename iterator_traits&lt;I&gt;::iterator_category;
+    decltype(auto) operator*() const
+    {
+        return *it_;
+    }
+    counted_iterator &amp; operator++()
+    {
+        ++it_;
+        --n_;
+        return *this;
+    }
+    friend bool operator==(counted_iterator const &amp; it,
+                           counted_sentinel)
+    {
+        return it.n_ == 0;
+    }
+    // ... other operators...
+};
+
+template&lt;WeakIterator I&gt;
+class counted_range
+{
+    I begin_;
+    DistanceType&lt;I&gt; count_;
+public:
+    // ... constructors ...
+    counted_iterator&lt;I&gt; begin() const
+    {
+        return {begin_, count_};
+    }
+    counted_sentinel end() const
+    {
+        return {};
+    }
+};
+
+template&lt;WeakIterator I&gt;
+struct common_type&lt;counted_iterator&lt;I&gt;, counted_sentinel&gt;
+    // ... see Appendix 2 ...</code></pre>
+<p>There are some noteworthy things about the code above. First, <code>counted_iterator</code> bundles an iterator and a count. Right off, we see that copying counted iterators is going to be more expensive, and iterators are copied frequently. A mitigating factor is that the sentinel is empty. Passing a <code>counted_iterator</code> and a <code>counted_sentinel</code> to an algorithm copies as much data as passing an iterator and a count. When passed separately, the compiler probably has an easier time fitting them in registers, but some modern compilers are capable passing the members of a struct in registers. This compiler optimization is sometimes called Scalar Replacement of Aggregates (see Muchnick 1997, ch. 12.2 <span class="citation">[12]</span>) and is known to be implemented in gcc and LLVM (see <a href="http://reviews.llvm.org/D2680" title="Debug info: Support fragmented variables.">this recent LLVM commit</a><span class="citation">[7]</span> for example).</p>
+<p>Also, incrementing a counted iterator is expensive: it involves incrementing the underlying iterator and decrementing the internal count. To see why this is potentially expensive, consider the trivial case of passing a <code>counted_iterator&lt;list&lt;int&gt;::iterator&gt;</code> to <code>advance</code>. That counted iterator type is bidirectional, and <code>advance</code> must increment it <em>n</em> times:</p>
+<pre><code>template&lt;BidirectionalIterator I&gt;
+void advance(I &amp; i, DistanceType&lt;I&gt; n)
+{
+    if(n &gt;= 0)
+        for(; n != 0; --n)
+            ++i;
+    else
+        for(; n != 0; ++n)
+            --i;
+}</code></pre>
+<p>Notice that for each <code>++i</code> or <code>--i</code> here, <em>two</em> increments or decrements are happening when <code>I</code> is a <code>counted_iterator</code>. This is sub-optimal. A better implementation for <code>counted_iterator</code> is:</p>
+<pre><code>template&lt;BidirectionalIterator I&gt;
+void advance(counted_iterator&lt;I&gt; &amp; i, DistanceType&lt;I&gt; n)
+{
+    i.n_ -= n;
+    advance(i.it_, n);
+}</code></pre>
+<p>This has a noticeable effect on the generated code. As it turns out, <code>advance</code> is one of the relatively few places in the standard library where special handling of <code>counted_iterator</code> is advantageous. Let’s examine some algorithms to see why that’s the case.</p>
+<h2 id="single-pass-algorithms-with-counted-iterators"><span class="header-section-number">12.1</span> Single-Pass Algorithms with Counted Iterators</h2>
+<p>First, let’s look at a simple algorithm like <code>for_each</code> that makes exactly one pass through its input sequence:</p>
+<pre><code>template&lt;InputIterator I, Regular S, Function&lt;ValueType&lt;I&gt;&gt; F&gt;
+    requires EqualityComparable&lt;I, S&gt;
+I for_each(I first, S last, F f)
+{
+    for(; first != last; ++first)
+        f(*first);
+    return first;
+}</code></pre>
+<p>When passed counted iterators, at each iteration of the loop, we do an increment, a decrement (for the underlying iterator and the count), and a comparison. Let’s compare this against a hypothetical <code>for_each_n</code> algorithm that takes the underlying iterator and the count separately. It might look like this:</p>
+<pre><code>template&lt;InputIterator I, Function&lt;ValueType&lt;I&gt;&gt; F&gt;
+I for_each_n(I first, DifferenceType&lt;I&gt; n, F f)
+{
+    for(; n != 0; ++first, --n)
+        f(*first);
+    return first;
+}</code></pre>
+<p>For the hypothetical <code>for_each_n</code>, at each loop iteration, we do an increment, a decrement, and a comparison. That’s exactly as many operations as <code>for_each</code> does when passed counted iterators. So a separate <code>for_each_n</code> algorithm is probably unnecessary if we have sentinels and <code>counted_iterator</code>s. This is true for any algorithm that makes only one pass through the input range. That turns out to be a lot of algorithms.</p>
+<h2 id="multi-pass-algorithms-with-counted-iterators"><span class="header-section-number">12.2</span> Multi-Pass Algorithms with Counted Iterators</h2>
+<p>There are other algorithms that make more than one pass over the input sequence. Most of those, however, use <code>advance</code> when they need to move iterators by more than one hop. Once we have specialized <code>advance</code> for <code>counted_iterator</code>, those algorithms that use <code>advance</code> get faster without any extra work.</p>
+<p>Consider <code>partition_point</code>. Here is one example implementation, taken from <a href="http://libcxx.llvm.org/" title="libc++ C++ Standard Library">libc++</a><span class="citation">[9]</span> and ported to Concepts Lite and sentinels:</p>
+<pre><code>template&lt;ForwardIterator I, Regular S, Predicate&lt;ValueType&lt;I&gt;&gt; P&gt;
+    requires EqualityComparable&lt;I, S&gt;
+I partition_point(I first, S last, P pred)
+{
+    DifferenceType&lt;I&gt; len = distance(first, last);
+    while (len != 0)
+    {
+        DifferenceType&lt;I&gt; l2 = len / 2;
+        I m = first;
+        advance(m, l2);
+        if (pred(*m))
+        {
+            first = ++m;
+            len -= l2 + 1;
+        }
+        else
+            len = l2;
+    }
+    return first;
+}</code></pre>
+<p>Imagine that <code>I</code> is a forward <code>counted_iterator</code> and <code>S</code> is a <code>counted_sentinel</code>. If the library does not specialize <code>advance</code>, this is certainly inefficient. Every time <code>advance</code> is called, needless work is being done. Compare it to a hypothetical <code>partition_point_n</code>:</p>
+<pre><code>template&lt;ForwardIterator I, Predicate&lt;ValueType&lt;I&gt;&gt; P&gt;
+I partition_point_n(I first, DifferenceType&lt;I&gt; len, P pred)
+{
+    while (len != 0)
+    {
+        DifferenceType&lt;I&gt; l2 = len / 2;
+        I m = first;
+        advance(m, l2);
+        if (pred(*m))
+        {
+            first = ++m;
+            len -= l2 + 1;
+        }
+        else
+            len = l2;
+    }
+    return first;
+}</code></pre>
+<p>The first thing we notice is that <code>partition_point_n</code> doesn’t need to call <code>distance</code>! The more subtle thing to note is that calling <code>partition_point_n</code> with a raw iterator and a count saves about O(N) integer decrements over the equivalent call to <code>partition_point</code> with <code>counted_iterator</code>s … unless, of course, we have specialized the <code>advance</code> algorithm as shown above. Once we have, we trade the O(N) integer decrements for O(log N) integer subtractions. That’s a big improvement.</p>
+<p>But what about the O(N) call to <code>distance</code>? Actually, that’s easy, and it’s the reason why the SizedIteratorRange concept exists. <code>counted_iterator</code> stores the distance to the end. So the distance between a <code>counted_iterator</code> and a <code>counted_sentinel</code> (or between two <code>counted_iterators</code>) is known in O(1) <em>regardless of the iterator’s category</em>. The SizedIteratorRange concept tests whether an iterator <code>I</code> and a sentinel <code>S</code> can be subtracted to get the distance. This concept is modeled by random-access iterators by their nature, but also by counted iterators and their sentinels. The <code>distance</code> algorithm is specialized for SizedIteratorRange, so it is O(1) for counted iterators.</p>
+<p>With these changes, we see that <code>partition_point</code> with counted iterators is very nearly as efficient as a hypothetical <code>partition_point_n</code> would be, and we had to make no special accommodations. Why can’t we make <code>partition_point</code> <em>exactly</em> as efficient as <code>partition_point_n</code>? When <code>partition_point</code> is called with a counted iterator, it also <em>returns</em> a counted iterator. Counted iterators contain two datums: the position and distance to the end. But when <code>partition_point_n</code> returns just the position, it is actually computing and returning less information. Sometimes users don’t need the extra information. But sometimes, after calling <code>partition_point_n</code>, the user might want to pass the resulting iterator to another algorithm. If <em>that</em> algorithm calls <code>distance</code> (like <code>partition_point</code> and other algorithms do), then it will be O(N). With counted iterators, however, it’s O(1). So in the case of <code>partition_point</code>, counted iterators cause the algorithm to do O(log N) extra work, but it sometimes saves O(N) work later.</p>
+<p>To see an example, imagine a trivial <code>insertion_sort</code> algorithm:</p>
+<pre><code>template&lt;ForwardIterator I, Regular S&gt;
+    requires EqualityComparable&lt;I, S&gt; &amp;&amp; Sortable&lt;I&gt; // from N3351
+void insertion_sort(I begin, S end)
+{
+    for(auto it = begin; it != end; ++it)
+    {
+        auto insertion = upper_bound(begin, it, *it);
+        rotate(insertion, it, next(it));
+    }
+}</code></pre>
+<p>Imagine that <code>I</code> is a <code>counted_iterator</code>. The first thing <code>upper_bound</code> does is call <code>distance</code>. Making <code>distance</code> O(1) for <code>counted_iterator</code>s saves N calls of an O(N) algorithm. To get comparable performance for an equivalent procedure in today’s STL, users would have to write a separate <code>insertion_sort_n</code> algorithm that dispatches to an <code>upper_bound_n</code> algorithm – that they would also need to write themselves.</p>
+<h2 id="counted-algorithms-with-counted-iterators"><span class="header-section-number">12.3</span> Counted Algorithms with Counted Iterators</h2>
+<p>We’ve seen that regular algorithms with counted iterators can be made nearly as efficient as dedicated counted algorithms, and that sometimes we are more than compensated for the small performance loss. All is not roses, however. There are a number of <em>counted algorithms</em> in the standard (the algorithms whose names end with <code>_n</code>). Consider <code>copy_n</code>:</p>
+<pre><code>template&lt;WeakInputIterator I, WeakOutputIterator&lt;ValueType&lt;I&gt;&gt; O&gt;
+pair&lt;I, O&gt; copy_n(I in, DifferenceType&lt;I&gt; n, O out)
+{
+    for(; n != 0; ++in, ++out, --n)
+        *out = *in;
+    return {in, out};
+}</code></pre>
+<p>(We’ve changed the return type of <code>copy_n</code> so as not to lose information.) If <code>I</code> is a counted iterator, then for every <code>++in</code>, an increment and a decrement are happening, and in this case the extra decrement is totally unnecessary. For <em>any</em> counted (i.e., <code>_n</code>) algorithm, something special needs to be done to keep the performance from degrading when passed counted iterators.</p>
+<p>The algorithm author has two options here, and neither of them is ideal.</p>
+<p><strong>Option 1: Overload the algorithm</strong></p>
+<p>The following is an optimized version of <code>copy_n</code> for counted iterators:</p>
+<pre><code>template&lt;WeakInputIterator I, WeakOutputIterator&lt;ValueType&lt;I&gt;&gt; O&gt;
+pair&lt;I, O&gt; copy_n(counted_iterator&lt;I&gt; in, DifferenceType&lt;I&gt; n, O out)
+{
+    for(auto m = in.n_ - n; in.n_ != m; ++in.i_, --in.n_, ++out)
+        *out = *in;
+    return {in, out};
+}</code></pre>
+<p>Obviously, creating an overload for counted iterators is unsatisfying.</p>
+<p><strong>Option 2: Separate the iterator from the count</strong></p>
+<p>This option shows how a library implementer can write just one version of <code>copy_n</code> that is automatically optimized for counted iterators. First, we need to provide two utility functions for unpacking and repacking counted iterators:</p>
+<pre><code>template&lt;WeakIterator I&gt;
+I uncounted(I i)
+{
+    return i;
+}
+
+template&lt;WeakIterator I&gt;
+I uncounted(counted_iterator&lt;I&gt; i)
+{
+    return i.it_;
+}
+
+template&lt;WeakIterator I&gt;
+I recounted(I const &amp;, I i, DifferenceType&lt;I&gt;)
+{
+    return i;
+}
+
+template&lt;WeakIterator I&gt;
+counted_iterator&lt;I&gt; recounted(counted_iterator&lt;I&gt; const &amp;j, I i, DifferenceType&lt;I&gt; n)
+{
+    return {i, j.n_ - n};
+}</code></pre>
+<p>With the help of <code>uncounted</code> and <code>recounted</code>, we can write an optimized <code>copy_n</code> just once:</p>
+<pre><code>template&lt;WeakInputIterator I, WeakOutputIterator&lt;ValueType&lt;I&gt;&gt; O&gt;
+pair&lt;I, O&gt; copy_n(I in_, DifferenceType&lt;I&gt; n_, O out)
+{
+    auto in = uncounted(in_);
+    for(auto n = n_; n != 0; ++in, --n, ++out)
+        *out = *in;
+    return {recounted(in_, in, n_), out};
+}</code></pre>
+<p>This version works optimally for both counted and non-counted iterators. It is not a thing of beauty, however. It’s slightly annoying to have to do the <code>uncounted</code>/<code>recounted</code> dance, but it’s mostly needed only in the counted algorithms.</p>
+<p>As a final note, the overload of <code>advance</code> for counted iterators can be eliminated with the help of <code>uncounted</code> and <code>recounted</code>. After all, <code>advance</code> is a counted algorithm.</p>
+<h2 id="benchmark-insertion-sort"><span class="header-section-number">12.4</span> Benchmark: Insertion Sort</h2>
+<p>To test how expensive counted ranges and counted iterators are, we wrote a benchmark. The benchmark program pits counted ranges against a dedicated <code>_n</code> algorithm for <a href="http://en.wikipedia.org/wiki/Insertion_sort">Insertion Sort</a>.</p>
+<p>The program is listed below:</p>
+<pre><code>#include &lt;chrono&gt;
+#include &lt;iostream&gt;
+#include &lt;range/v3/range.hpp&gt;
+
+class timer
+{
+private:
+    std::chrono::high_resolution_clock::time_point start_;
+public:
+    timer()
+    {
+        reset();
+    }
+    void reset()
+    {
+        start_ = std::chrono::high_resolution_clock::now();
+    }
+    std::chrono::milliseconds elapsed() const
+    {
+        return std::chrono::duration_cast&lt;std::chrono::milliseconds&gt;(
+            std::chrono::high_resolution_clock::now() - start_);
+    }
+    friend std::ostream &amp;operator&lt;&lt;(std::ostream &amp;sout, timer const &amp;t)
+    {
+        return sout &lt;&lt; t.elapsed().count() &lt;&lt; &quot;ms&quot;;
+    }
+};
+
+template&lt;typename It&gt;
+struct forward_iterator
+{
+    It it_;
+
+    template&lt;typename U&gt;
+    friend struct forward_iterator;
+public:
+    typedef          std::forward_iterator_tag                 iterator_category;
+    typedef typename std::iterator_traits&lt;It&gt;::value_type      value_type;
+    typedef typename std::iterator_traits&lt;It&gt;::difference_type difference_type;
+    typedef It                                                 pointer;
+    typedef typename std::iterator_traits&lt;It&gt;::reference       reference;
+
+    forward_iterator() : it_() {}
+    explicit forward_iterator(It it) : it_(it) {}
+
+    reference operator*() const {return *it_;}
+    pointer operator-&gt;() const {return it_;}
+
+    forward_iterator&amp; operator++() {++it_; return *this;}
+    forward_iterator operator++(int)
+        {forward_iterator tmp(*this); ++(*this); return tmp;}
+
+    friend bool operator==(const forward_iterator&amp; x, const forward_iterator&amp; y)
+        {return x.it_ == y.it_;}
+    friend bool operator!=(const forward_iterator&amp; x, const forward_iterator&amp; y)
+        {return !(x == y);}
+};
+
+template&lt;typename I, typename V2&gt;
+I upper_bound_n(I begin, typename std::iterator_traits&lt;I&gt;::difference_type d, V2 const &amp;val)
+{
+    while(0 != d)
+    {
+        auto half = d / 2;
+        auto middle = std::next(begin, half);
+        if(val &lt; *middle)
+            d = half;
+        else
+        {
+            begin = ++middle;
+            d -= half + 1;
+        }
+    }
+    return begin;
+}
+
+template&lt;typename I&gt;
+void insertion_sort_n(I begin, typename std::iterator_traits&lt;I&gt;::difference_type n)
+{
+    auto m = 0;
+    for(auto it = begin; m != n; ++it, ++m)
+    {
+        auto insertion = upper_bound_n(begin, m, *it);
+        ranges::rotate(insertion, it, std::next(it));
+    }
+}
+
+template&lt;typename I, typename S&gt;
+void insertion_sort(I begin, S end)
+{
+    for(auto it = begin; it != end; ++it)
+    {
+        auto insertion = ranges::upper_bound(begin, it, *it);
+        ranges::rotate(insertion, it, std::next(it));
+    }
+}
+
+template&lt;typename Rng&gt;
+void insertion_sort(Rng &amp;&amp; rng)
+{
+    ::insertion_sort(std::begin(rng), std::end(rng));
+}
+
+std::unique_ptr&lt;int[]&gt; data(int i)
+{
+    std::unique_ptr&lt;int[]&gt; a(new int[i]);
+    auto rng = ranges::view::counted(a.get(), i);
+    ranges::iota(rng, 0);
+    return a;
+}
+
+void shuffle(int *a, int i)
+{
+    auto rng = ranges::view::counted(a, i);
+    ranges::random_shuffle(rng);
+}
+
+constexpr int cloops = 3;
+
+template&lt;typename I&gt;
+void benchmark_n(int i)
+{
+    auto a = data(i);
+    long ms = 0;
+    for(int j = 0; j &lt; cloops; ++j)
+    {
+        ::shuffle(a.get(), i);
+        timer t;
+        insertion_sort_n(I{a.get()}, i);
+        ms += t.elapsed().count();
+    }
+    std::cout &lt;&lt; (int)((double)ms/cloops) &lt;&lt; std::endl;
+}
+
+template&lt;typename I&gt;
+void benchmark_counted(int i)
+{
+    auto a = data(i);
+    long ms = 0;
+    for(int j = 0; j &lt; cloops; ++j)
+    {
+        ::shuffle(a.get(), i);
+        timer t;
+        insertion_sort(ranges::view::counted(I{a.get()}, i));
+        ms += t.elapsed().count();
+    }
+    std::cout &lt;&lt; (int)((double)ms/cloops) &lt;&lt; std::endl;
+}
+
+int main(int argc, char *argv[])
+{
+    if(argc &lt; 2)
+        return -1;
+
+    int i = std::atoi(argv[1]);
+    std::cout &lt;&lt; &quot;insertion_sort_n (random-access) : &quot;;
+    benchmark_n&lt;int*&gt;(i);
+    std::cout &lt;&lt; &quot;insertion_sort   (random-access) : &quot;;
+    benchmark_counted&lt;int*&gt;(i);
+    std::cout &lt;&lt; &quot;\n&quot;;
+    std::cout &lt;&lt; &quot;insertion_sort_n (forward)       : &quot;;
+    benchmark_n&lt;forward_iterator&lt;int*&gt;&gt;(i);
+    std::cout &lt;&lt; &quot;insertion_sort   (forward)       : &quot;;
+    benchmark_counted&lt;forward_iterator&lt;int*&gt;&gt;(i);
+}</code></pre>
+<p>The program implements both <code>insertion_sort_n</code>, a dedicated counted algorithm, and <code>insertion_sort</code>, a general algorithm that accepts any Iterable, to which we pass a counted range. The latter is implemented in terms of the general-purpose <code>upper_bound</code> as provided by the Range v3 library, whereas the former requires a dedicated <code>upper_bound_n</code> algorithm, which is also provided.</p>
+<p>The test is run both with raw pointers (hence, random-access) and with an iterator wrapper that only models ForwardIterator. Each test is run three times, and the resulting times are averaged. The test was compiled with <code>g++</code> version 4.9.0 with <code>-O3 -std=gnu++11 -DNDEBUG</code> and run on a Linux machine. The results are reported below, for N == 30,000:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left"> </th>
+<th align="left"><code>insertion_sort_n</code></th>
+<th align="left"><code>insertion_sort</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">random-access</td>
+<td align="left">2.692 s</td>
+<td align="left">2.703 s</td>
+</tr>
+<tr class="even">
+<td align="left">forward</td>
+<td align="left">23.853 s</td>
+<td align="left">23.817 s</td>
+</tr>
+</tbody>
+</table>
+<p>The performance difference, if there is any, is lost in the noise. At least in this case, with this compiler, on this hardware, there is no performance justification for a dedicated <code>_n</code> algorithm.</p>
+<p><strong>Summary</strong></p>
+<p>In short, counted iterators are not a <em>perfect</em> abstraction. There is some precedent here. The iterators for <code>deque</code>, and for any segmented data structure, are known to be inefficient (see <a href="http://lafstern.org/matt/segmented.pdf" title="Segmented Iterators and Hierarchical Algorithms">Segmented Iterators and Hierarchical Algorithms</a>, Austern 1998<span class="citation">[2]</span>). The fix for that problem, new iterator abstractions and separate hierarchical algorithm implementations, is invasive and is not attempted in any STL implementation we are aware of. In comparison, the extra complications that come with counted iterators seem quite small. For segmented iterators, the upside was the simplicity and uniformity of the Iterator abstraction. In the case of counted ranges and iterators, the upside is the simplicity and uniformity of the Iterable concept. Algorithms need only one form, not separate bounded, counted, and sentinel forms. Our benchmark gives us reasonable assurance that we aren’t sacrificing performance for the sake of a unifying abstraction.</p>
+<h1 id="appendix-5-drive-by-improvements-to-the-standard-algorithms"><span class="header-section-number">13</span> Appendix 5: Drive-By Improvements to the Standard Algorithms</h1>
+<p>As we are making changes to the standard algorithms, not all of which are strictly source compatible, here are some other drive-by changes that we might consider making. The changes suggested below have nothing to do with ranges <em>per se</em>, but they increase the power and uniformity of the STL and they have proven useful in the Adobe Source Library, so we might consider taking all these changes in one go.</p>
+<h2 id="higher-order-algorithms-should-take-invokables-instead-of-functions"><span class="header-section-number">13.1</span> Higher-Order Algorithms Should Take Invokables Instead of Functions</h2>
+<p>Some algorithms like <code>for_each</code> are higher-order; they take functions as parameters. In <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span>, they are constrained with the <code>Function</code> concept which, among other things, requires that its parameters can be used to form a valid callable expression <code>f(a)</code>.</p>
+<p>However, consider a class <code>S</code> with a member function <code>Do</code>, like:</p>
+<pre><code>class S {
+public:
+    void Do() const;
+};</code></pre>
+<p>If we have a <code>vector</code> of <code>S</code> objects and we want to <code>Do</code> all of them, this is what we need to do:</p>
+<pre><code>for_each( v, [](auto &amp; s) { s.Do(); });</code></pre>
+<p>or, more concisely with a <code>bind</code> expression:</p>
+<pre><code>for_each( v, bind(&amp;S::Do, _1) );</code></pre>
+<p>Note that <code>bind</code> is specified in terms of a hypothetical INVOKE utility in [func.require]. Wouldn’t it be more convenient if all the algorithms were required to merely take INVOKE-able things – that is, things that can be passed to <code>bind</code> – as arguments, instead of Functions? Then we can express the above call to <code>for_each</code> more concisely as:</p>
+<pre><code>for_each( v, &amp;S::Do );</code></pre>
+<p>We can define an <code>invokable</code> utility function as:</p>
+<pre><code>template&lt;typename R, typename T&gt;
+auto invokable(R T::* p) const -&gt; decltype(std::mem_fn(p))
+{
+    return std::mem_fn(p);
+}
+
+template&lt;typename T, typename U = decay_t&lt;T&gt;&gt;
+auto invokable(T &amp;&amp; t) const -&gt; enable_if_t&lt;!is_member_pointer&lt;U&gt;::value, T&gt;
+{
+    return std::forward&lt;T&gt;(t);
+}
+
+template&lt;typename F&gt;
+using invokable_t = decltype(invokable(std::declval&lt;F&gt;()));</code></pre>
+<p>We can define an Invokable concept as:</p>
+<pre><code>concept Invokable&lt;Semiregular F, typename... As&gt; =
+    Function&lt;invokable_t&lt;F&gt;, As...&gt; &amp;&amp;
+    requires (F f, As... as) {
+        InvokableResultOf&lt;F, As...&gt;;
+        InvokableResultOf&lt;F, As...&gt; == invokable(f)(as...);
+    };</code></pre>
+<p>The Invokable concept can be used to constrain algorithms instead of the Function concept. The algorithms would need to apply <code>invokable</code> to each Invokable argument before invoking it.</p>
+<p>This is pure extension and would break no code.</p>
+<h2 id="algorithms-should-take-invokable-projections"><span class="header-section-number">13.2</span> Algorithms Should Take Invokable Projections</h2>
+<p>The <a href="http://stlab.adobe.com/" title="Adobe Source Libraries">Adobe Source Libraries (ASL)</a><span class="citation">[1]</span> pioneered the use of “projections” to make the algorithms more powerful and expressive by increasing interface symmetry. Sean Parent gives a motivating example in his <a href="https://github.com/sean-parent/sean-parent.github.com/wiki/presentations/2013-09-11-cpp-seasoning/cpp-seasoning.pdf" title="C++ Seasoning, Sean Parent">“C++ Seasoning” talk</a><span class="citation">[15]</span>, on slide 38. With today’s STL, when using <code>sort</code> and <code>lower_bound</code> together with user-defined predicates, the predicate must sometimes differ. Consider:</p>
+<pre><code>std::sort(a, [](const employee&amp; x, const employee&amp; y)
+             { return x.last &lt; y.last; });
+auto p = std::lower_bound(a, &quot;Parent&quot;, [](const employee&amp; x, const string&amp; y)
+                                       { return x.last &lt; y; });</code></pre>
+<p>Notice the different predicates used in the invocations of <code>sort</code> and <code>lower_bound</code>. Since the predicates are different, there is a chance they might get out of sync leading to subtle bugs.</p>
+<p>By introducing the use of projections, this code is simplified to:</p>
+<pre><code>std::sort(a, std::less&lt;&gt;(), &amp;employee::last);
+auto p = std::lower_bound(a, &quot;Parent&quot;, std::less&lt;&gt;(), &amp;employee::last);</code></pre>
+<p>Every element in the input sequence is first passed through the projection <code>&amp;employee::last</code>. As a result, the simple comparison predicate <code>std::less&lt;&gt;</code> can be used in both places.</p>
+<p>No effort was made in ASL to use projections consistently. This proposal bakes them in everywhere it makes sense. Here are the guidelines to be applied to the standard algorithms:</p>
+<ul>
+<li>Wherever appropriate, algorithms should optionally take INVOKE-able <em>projections</em> that are applied to each element in the input sequence(s). This, in effect, allows users to trivially transform each input sequence for the sake of that single algorithm invocation.</li>
+<li>Algorithms that take two input sequences should (optionally) take two projections.</li>
+<li>For algorithms that optionally accept functions/predicates (e.g. <code>transform</code>, <code>sort</code>), projection arguments follow functions/predicates. There are no algorithm overloads that allow the user to specify the projection without also specifying a predicate, even if the default would suffice. This is to reduce the number of overloads and also to avoid any potential for ambiguity.</li>
+</ul>
+<p>An open design question is whether all algorithms should take projections, or only the higher-order algorithms. In our current design, all algorithms take projections. This makes it trivial to, say, copy all the keys of a map by using the standard <code>copy</code> algorithm with <code>&amp;pair&lt;const key,value&gt;::first</code> as the projection.</p>
+<h3 id="projections-versus-range-transform-view"><span class="header-section-number">13.2.1</span> Projections versus Range Transform View</h3>
+<p>In a sense, the use of a projection parameter to an algorithm is similar to applying a transform view directly to a range. For example, calling <code>std::find</code> with a projection is similar to applying a transform to a range and calling without the projection:</p>
+<pre><code>auto it = std::find( a, 42, &amp;employee::age );
+
+auto a2 = a | view::transform( &amp;employee::age );
+auto it2 = std::find( a2, 42 );</code></pre>
+<p>Aside from the extra verbosity of the view-based solution, there are two meaningful differences: (1) The type of the resulting iterator is different; <code>*it</code> refers to an <code>employee</code> whereas <code>*it2</code> refers to an <code>int</code>. And (2) if the transform function returns an rvalue, then the transformed view cannot model a forward sequence due to the current requirements on the ForwardIterator concept. The result of applying a transform view is an Input range unless the transform function returns an lvalue. The projection-based interface suffers no such degradation of the iterator category. (Note: if the concepts in <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">N3351</a><span class="citation">[21]</span> are adopted, this argument is no longer valid.) For those reasons, range transform adapters are not a replacement for projection arguments to algorithms.</p>
+<p>See <a href="#algorithm-implementation-with-projections">Algorithm Implementation with Projections</a> for a discussion of how projections affect the implementation.</p>
+<p>The addition of projection arguments to the algorithms is pure extension.</p>
+<h1 id="appendix-6-implementation-notes"><span class="header-section-number">14</span> Appendix 6: Implementation Notes</h1>
+<h2 id="on-distinguishing-ranges-from-non-range-iterables"><span class="header-section-number">14.1</span> On Distinguishing Ranges from Non-Range Iterables</h2>
+<p>The design of the range library depends on the ability to tell apart Ranges from Iterables. Ranges are lightweight objects that refer to elements they do not own. As a result, they can guarantee O(1) copyability and assignability. Iterables, on the other hand, may or may not own their elements, and so cannot guarantee anything about the algorithmic complexity of their copy and assign operations. Indeed, an Iterable may not be copyable at all: it may be a native array or a <code>vector</code> of move-only types.</p>
+<p>But how to tell Ranges apart from Iterables? After all, whether an Iterable owns its elements or not is largely a semantic difference with no purely syntactic way to differentiate. Well, that’s almost true…</p>
+<p>It turns out that there is a reasonably good heuristic we can use to tell Iterables and Ranges apart. Imagine that we have some Iterable type <code>T</code> that is either a container like <code>list</code>, <code>vector</code>, or a native array; or else it’s a Range like <code>pair&lt;int*,int*&gt;</code>. Then we can imagine taking iterators to <code>T</code> and <code>const T</code>, dereferencing them, and comparing the resulting reference types. The following table gives the results we might expect to find.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Expression</th>
+<th align="left">Container</th>
+<th align="left">Range</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>*begin(declval&lt;T&amp;&gt;())</code></td>
+<td align="left"><code>value_type &amp;</code></td>
+<td align="left"><code>[const] value_type &amp;</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>*begin(declval&lt;const T&amp;&gt;())</code></td>
+<td align="left"><code>const value_type &amp;</code></td>
+<td align="left"><code>[const] value_type &amp;</code></td>
+</tr>
+</tbody>
+</table>
+<p>Notice how containers and ranges differ in the way a top-level cv-qualifier affects the reference type. Since a range is a proxy to elements stored elsewhere, a top-level <code>const</code> qualification on the <em>range</em> object typically has no effect at all on its iterator’s reference type. But that’s not true for a container that owns its elements.</p>
+<p>We can use this to build an <code>is_range</code> traits that gives a pretty good guess whether an Iterable type is a range or not. This trait can be used to define the Range concept. Obviously since it’s a trait, users are free to specialize it if the trait guesses wrong.</p>
+<p>Some people want their range types to behave like containers with respect to the handling of top-level <code>const</code>; that is, they would like their ranges to be designed such that if the range object is <code>const</code>, the range’s elements cannot be mutated through it. There is nothing about the Range concepts that precludes that design, but it does require the developer of such a range to specialize the <code>is_range</code> trait. If anything, the default behavior of the trait can be seen as gentle encouragement to handle top-level <code>const</code> in a way that is consistent with ranges’ nature as a lightweight proxy.</p>
+<p>As an added convenience, we can provide a class, <code>range_base</code>, from which users can create a derived type as another way of opting in to “range-ness”. The <code>is_range</code> trait can test for derivation from <code>range_base</code> as an extra test. This would save users the trouble of opening the <code>std</code> namespace to specialize the <code>is_range</code> trait on the rare occasions that that is necessary.</p>
+<p>The <code>is_range</code> trait will also need to be specialized for immutable containers, for which both the mutable and const iterators have the same reference type. A good example is <code>std::set</code>.</p>
+<p>If the <code>is_range</code> trait erroneously reports <code>false</code> for a type that is actually a range, then the library errs on the side of caution and will prevent the user from using rvalues of that type in range adaptor pipelines. If, on the other hand, the <code>is_range</code> trait gets the answer wrong for a type that is actually a container, the container ends up being copied or moved into range adaptors. This is a performance bug, and it may give surprising results at runtime if the original container doesn’t get mutated when the user thinks it should. It’s not a memory error, though.</p>
+<h2 id="algorithm-implementation-with-projections"><span class="header-section-number">14.2</span> Algorithm Implementation with Projections</h2>
+<p>Rather than requiring additional overloads, the addition of projection arguments has very little cost to library implementers. The use of function template default parameters obviates the need for overloads. For instance, <code>find</code> can be defined as:</p>
+<pre><code>template&lt;InputIterator I, Regular S, typename V, Invokable&lt;ValueType&lt;I&gt;&gt; Proj = identity&gt;
+    requires EqualityComparable&lt;I, S&gt; &amp;&amp;
+             EqualityComparable&lt;V, InvokableResultOf&lt;Proj, ValueType&lt;I&gt;&gt;&gt;
+I find(I first, S last, V const &amp; val, Proj proj = Proj{})
+{
+    /* ... */
+}</code></pre>
+<h2 id="algorithms-that-need-an-end-iterator"><span class="header-section-number">14.3</span> Algorithms That Need An End Iterator</h2>
+<p>Some algorithms need to know the real physical end of the input sequence so that the sequence can be traversed backwards, like <code>reverse</code>. In those cases, it’s helpful to have an algorithm <code>advance_to</code> that takes an iterator and a sentinel and returns a real end iterator. <code>advance_to</code> looks like this:</p>
+<pre><code>template&lt;Iterator I, Regular S&gt;
+    requires IteratorRange&lt;I, S&gt;
+I advance_to( I i, S s )
+{
+    while(i != s)
+        ++i;
+    return i;
+}
+
+template&lt;Iterator I, Regular S&gt;
+    requires SizedIteratorRange&lt;I, S&gt;
+I advance_to( I i, S s )
+{
+    advance( i, s - i );
+    return i;
+}
+
+template&lt;Iterator I&gt;
+I advance_to( I, I s )
+{
+    return s;
+}</code></pre>
+<p>When the sentinel is actually an iterator, we already know where the end is so we can just return it. Notice how we handle SizedIteratorRanges specially and dispatch to <code>advance</code> with a count. <a href="#appendix-4-on-counted-ranges-and-efficiency">Appendix 4</a> shows how <code>advance</code> is optimized for counted iterators. By dispatching to <code>advance</code> when we can, we make <code>advance_to</code> faster for counted iterators, too.</p>
+<p>With <code>advance_to</code> we can implement <code>reverse</code> generically as:</p>
+<pre><code>template&lt;BidirectionalIterator I, Regular S&gt;
+    requires EqualityComparable&lt;I, S&gt; &amp;&amp; Permutable&lt;I&gt;
+I reverse( I first, S last_ )
+{
+    I last = advance_to( first, last_ ), end = last;
+    while( first != last )
+    {
+        if( first == --last )
+            break;
+        iter_swap( first, last );
+        ++first;
+    }
+    return end;
+}</code></pre>
+<p>Since this algorithm necessarily computes the end of the sequence if it isn’t known already, we return it.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
