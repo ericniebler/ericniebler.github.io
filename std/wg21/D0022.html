@@ -427,7 +427,7 @@ sort(first, last, [](R&amp;&amp; x, R&amp;&amp; y) {<span class="kw">return</spa
 <p>To [19.2] Core Language Concepts, add the following:</p>
 <blockquote>
 <p><strong>19.2.<em>X</em> Concept CommonReference [concepts.lib.corelang.commonref]</strong></p>
-<p>If <code>T</code> and <code>U</code> can both be explicitly converted or bound to a third type, <code>C</code>, then <code>T</code> and <code>U</code> share a <em>common reference type</em>, <code>C</code>. [ <em>Note:</em> <code>C</code> could be the same as <code>T</code>, or <code>U</code>, or it could be a different type. <code>C</code> may be a reference type. <code>C</code> may not be unique. –<em>end note</em> ] Informally, two types <code>T</code> and <code>U</code> model the <code>CommonReference</code> concept when the type alias <code>CommonReferenceType&lt;T, U&gt;</code> is well-formed and names a common reference type of <code>T</code> and <code>U</code>.</p>
+<p>1. If <code>T</code> and <code>U</code> can both be explicitly converted or bound to a third type, <code>C</code>, then <code>T</code> and <code>U</code> share a <em>common reference type</em>, <code>C</code>. [ <em>Note:</em> <code>C</code> could be the same as <code>T</code>, or <code>U</code>, or it could be a different type. <code>C</code> may be a reference type. <code>C</code> may not be unique. –<em>end note</em> ] Informally, two types <code>T</code> and <code>U</code> model the <code>CommonReference</code> concept when the type alias <code>CommonReferenceType&lt;T, U&gt;</code> is well-formed and names a common reference type of <code>T</code> and <code>U</code>.</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
 <span class="kw">using</span> CommonReferenceType = common_reference_t&lt;T, U&gt;;
 
@@ -443,6 +443,12 @@ concept <span class="dt">bool</span> CommonReference() {
       CommonReferenceType&lt;T, U&gt;(std::forward&lt;U&gt;(u));
     };
 }</code></pre></div>
+<p>2. Let <code>C</code> be <code>CommonReferenceType&lt;T, U&gt;</code>. Let <code>t1</code> and <code>t2</code> be objects of type <code>T</code>, and <code>u1</code> and <code>u2</code> be objects of type <code>U</code>. <code>CommonReference&lt;T, U&gt;()</code> is satisfied if and only if</p>
+<blockquote>
+<p>(2.1) – <code>C(t1)</code> equals <code>C(t2)</code> if and only if <code>t1</code> equals <code>t2</code>.<br />
+(2.2) – <code>C(u1)</code> equals <code>C(u2)</code> if and only if <code>u1</code> equals <code>u2</code>.</p>
+</blockquote>
+<p>3. [ Note: Users are free to specialize <code>common_reference</code> when at least one parameter is a user-defined type. Those specializations are considered by the <code>CommonReference</code> concept. –end note ]</p>
 </blockquote>
 <p>Change 19.2.5 Concept Common to the following:</p>
 <blockquote>
