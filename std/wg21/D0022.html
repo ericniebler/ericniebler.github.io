@@ -109,8 +109,6 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#chapter-24.-iterators"><span class="toc-section-number">6.0.3</span> Chapter 24. Iterators</a></li>
 </ul></li>
 <li><a href="#acknowledgements"><span class="toc-section-number">7</span> Acknowledgements</a></li>
-<li><a href="#references"><span class="toc-section-number">8</span> References</a></li>
-<li><a href="#appendix-1-reference-implementations-of-common_type-and-common_reference"><span class="toc-section-number">9</span> Appendix 1: Reference implementations of <code>common_type</code> and <code>common_reference</code></a></li>
 </ul>
 </div>
 <h1 id="introduction"><span class="header-section-number">1</span> Introduction</h1>
@@ -122,7 +120,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1 id="implementation-experience"><span class="header-section-number">2</span> Implementation Experience</h1>
 <p>Everything suggested here has been implemented in C++11, where Concepts Lite has been simulated with the help of generalized SFINAE for expressions. In addition, a partial implementation using Concepts exists that works with the “<code>-std=c++1z</code>” support in gcc trunk.</p>
 <h1 id="motivation-and-scope"><span class="header-section-number">3</span> Motivation and Scope</h1>
-<p>The proxy iterator problem has been known since at least 1999 when Herb Sutter wrote his article <a href="http://www.gotw.ca/publications/mill09.htm" title="When is a container not a container?">“When is a container not a container?”</a><span class="citation">[6]</span> about the problems with <code>vector&lt;bool&gt;</code>. Because <code>vector&lt;bool&gt;</code> stores the <code>bool</code>s as bits in packed integers rather than as actual <code>bool</code>s, its iterators cannot return a real <code>bool&amp;</code> when they are dereferenced; rather, they must return proxy objects that merely behave like <code>bool&amp;</code>. That would be fine except that:</p>
+<p>The proxy iterator problem has been known since at least 1999 when Herb Sutter wrote his article <a href="http://www.gotw.ca/publications/mill09.htm" title="When is a container not a container?">“When is a container not a container?”</a><span class="citation">[7]</span> about the problems with <code>vector&lt;bool&gt;</code>. Because <code>vector&lt;bool&gt;</code> stores the <code>bool</code>s as bits in packed integers rather than as actual <code>bool</code>s, its iterators cannot return a real <code>bool&amp;</code> when they are dereferenced; rather, they must return proxy objects that merely behave like <code>bool&amp;</code>. That would be fine except that:</p>
 <ol>
 <li>According to the iterator requirements tables, every iterator category stronger than InputIterator is required to return a real reference from its dereference operator (<code>vector</code> is required to have random-access iterators), and</li>
 <li>Algorithms that move and swap elements often do not work with proxy references.</li>
@@ -137,7 +135,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li>A view of sub-objects (virtual or actual) that can only be accessed via getters and setters.</li>
 </ul>
 <p>These are all potentially interesting views that, as of today, can only be represented as Input sequences. That severely limits the number of algorithms that can operate on them. The design suggested by this paper would make all of these valid sequences even for RandomAccess.</p>
-<p>Note that not all iterators that return rvalues are proxy iterators. If the rvalue does not stand in for another object, it is not a proxy. For instance, an iterator that adapts another by multiplying each element by 2 is not a proxy iterator. The <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">Palo Alto report</a><span class="citation">[5]</span> lifts the onerous requirement that Forward iterators have true reference types, so they solve the “rvalue iterator” problem. However, as we show below, that is not enough to solve the “proxy iterator” problem.</p>
+<p>Note that not all iterators that return rvalues are proxy iterators. If the rvalue does not stand in for another object, it is not a proxy. For instance, an iterator that adapts another by multiplying each element by 2 is not a proxy iterator. The <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">Palo Alto report</a><span class="citation">[6]</span> lifts the onerous requirement that Forward iterators have true reference types, so they solve the “rvalue iterator” problem. However, as we show below, that is not enough to solve the “proxy iterator” problem.</p>
 <h2 id="proxy-iterator-problems"><span class="header-section-number">3.1</span> Proxy Iterator problems</h2>
 <p>For all its problems, <code>vector&lt;bool&gt;</code> works surprisingly well in practice, despite the fact that fairly trivial code such as below is not portable.</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">std::vector&lt;<span class="dt">bool</span>&gt; v{<span class="kw">true</span>,<span class="kw">false</span>,<span class="kw">true</span>};
@@ -365,7 +363,7 @@ concept <span class="dt">bool</span> IndirectlySwappable() {
     };
 }</code></pre></div>
 <h3 id="algorithm-constraints-indirectcallable"><span class="header-section-number">4.1.6</span> Algorithm constraints: IndirectCallable</h3>
-<p>Further problems with proxy iterators arise while trying to constrain algorithms that accept callback functions from users: predicates, relations, and projections. Below, for example, is part of the implementation of <code>unique_copy</code> from the SGI STL[TODO REFERENCE].</p>
+<p>Further problems with proxy iterators arise while trying to constrain algorithms that accept callback functions from users: predicates, relations, and projections. Below, for example, is part of the implementation of <code>unique_copy</code> from the <a href="https://www.sgi.com/tech/stl/" title="SGI Standard Template Library Programmer&#39;s Guide">SGI STL</a><span class="citation">[5]</span>.</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">_Tp value = *first;
 *result = value;
 <span class="kw">while</span> (++first != last)
@@ -1118,8 +1116,78 @@ template&lt;InputRange Rng, WeaklyIncrementable O, class Proj = identity,
 </blockquote>
 <p>Make the identical change to 25.3.9 “Unique” ([alg.unique]).</p>
 <h1 id="acknowledgements"><span class="header-section-number">7</span> Acknowledgements</h1>
-<h1 id="references"><span class="header-section-number">8</span> References</h1>
-<h1 id="appendix-1-reference-implementations-of-common_type-and-common_reference"><span class="header-section-number">9</span> Appendix 1: Reference implementations of <code>common_type</code> and <code>common_reference</code></h1>
+<div class="references">
+<h1 id="references" class="unnumbered">References</h1>
+<div id="ref-new-iter-concepts">
+<p>[1] Abrahams, D. et al. 2004. N1640: New Iterator Concepts.</p>
+</div>
+<div id="ref-n1873">
+<p>[2] Dietmar, K. and Abrahams, D. 2005. N1873: The Cursor/Property Map Abstraction.</p>
+</div>
+<div id="ref-n4382">
+<p>[3] Niebler, E. 2015. N4382: Working Draft: C++ Extensions for Ranges.</p>
+</div>
+<div id="ref-range-v3">
+<p>[4] Range v3: <em><a href="http://www.github.com/ericniebler/range-v3" class="uri">http://www.github.com/ericniebler/range-v3</a></em>. Accessed: 2014-10-08.</p>
+</div>
+<div id="ref-sgi-stl">
+<p>[5] SGI Standard Template Library Programmer’s Guide: <em><a href="https://www.sgi.com/tech/stl/" class="uri">https://www.sgi.com/tech/stl/</a></em>. Accessed: 2015-08-12.</p>
+</div>
+<div id="ref-palo-alto">
+<p>[6] Stroustrup, B. and Sutton, A. 2013. N3351: A Concept Design for the STL.</p>
+</div>
+<div id="ref-sutter-99">
+<p>[7] Sutter, H. 1999. When is a container not a container? <em>C++ Report</em>. 11, 5 (May 1999).</p>
+</div>
+</div>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+  </style>
+</head>
+<body>
+<h1 id="appendix-1-reference-implementations-of-common_type-and-common_reference"><span class="header-section-number">1</span> Appendix 1: Reference implementations of <code>common_type</code> and <code>common_reference</code></h1>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="ot">#include &lt;utility&gt;</span>
 <span class="ot">#include &lt;type_traits&gt;</span>
 
@@ -1294,25 +1362,7 @@ concept <span class="dt">bool</span> _Decayed = __v&lt;is_same&lt;decay_t&lt;T&g
   requires _Valid&lt;common_reference_t, T, U&gt;
 <span class="kw">struct</span> common_reference&lt;T, U, V, W...&gt;
   : common_reference&lt;common_reference_t&lt;T, U&gt;, V, W...&gt; { };</code></pre></div>
-<div class="references">
-<div id="ref-new-iter-concepts">
-<p>[1] Abrahams, D. et al. 2004. N1640: New Iterator Concepts.</p>
-</div>
-<div id="ref-n1873">
-<p>[2] Dietmar, K. and Abrahams, D. 2005. N1873: The Cursor/Property Map Abstraction.</p>
-</div>
-<div id="ref-n4382">
-<p>[3] Niebler, E. 2015. N4382: Working Draft: C++ Extensions for Ranges.</p>
-</div>
-<div id="ref-range-v3">
-<p>[4] Range v3: <em><a href="http://www.github.com/ericniebler/range-v3" class="uri">http://www.github.com/ericniebler/range-v3</a></em>. Accessed: 2014-10-08.</p>
-</div>
-<div id="ref-palo-alto">
-<p>[5] Stroustrup, B. and Sutton, A. 2013. N3351: A Concept Design for the STL.</p>
-</div>
-<div id="ref-sutter-99">
-<p>[6] Sutter, H. 1999. When is a container not a container? <em>C++ Report</em>. 11, 5 (May 1999).</p>
-</div>
-</div>
+</body>
+</html>
 </body>
 </html>
