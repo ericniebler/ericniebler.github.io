@@ -99,7 +99,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 </ul></li>
 <li><a href="#alternate-designs"><span class="toc-section-number">5</span> Alternate Designs</a><ul>
-<li><a href="#make-move-a-customization-point"><span class="toc-section-number">5.1</span> Make move a customization point</a></li>
+<li><a href="#make-move-a-customization-point"><span class="toc-section-number">5.1</span> Make <code>move</code> a customization point</a></li>
 <li><a href="#new-iterator-concepts"><span class="toc-section-number">5.2</span> New iterator concepts</a></li>
 <li><a href="#cursorproperty-map"><span class="toc-section-number">5.3</span> Cursor/Property Map</a></li>
 <li><a href="#language-support"><span class="toc-section-number">5.4</span> Language support</a></li>
@@ -113,15 +113,15 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul>
 </div>
 <h1 id="introduction"><span class="header-section-number">1</span> Introduction</h1>
-<p>This paper presents an extension to <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4382.pdf" title="Working Draft: C++ Extensions for Ranges">the Ranges design</a><span class="citation">[3]</span> that makes <em>proxy iterators</em> full-fledged members of the STL iterator hierarchy. This solves the “<code>vector&lt;bool&gt;</code>-is-not-a-container” problem along with several other problems that become apparent when working with range adaptors. It achieves this without <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1640.html" title="New Iterator Concepts">fracturing the <code>Iterator</code> concept hierarchy</a><span class="citation">[1]</span> and without breaking iterators apart into <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1873.html" title="The Cursor/Property Map Abstraction">separate traversal and access pieces</a><span class="citation">[2]</span>.</p>
-<p>The design presented makes only moderate, local changes to some Iterator concepts, fixes some existing library issues, and fills in a gap left by the addition of move semantics. The functions <code>swap</code> and <code>iter_swap</code> have been part of C++ since C++98. With C++11, the language got move semantics and <code>move</code>, but not <code>iter_move</code>. This arguably is an oversight. By adding it and making both <code>iter_swap</code> and <code>iter_move</code> customization points, iterators can control how elements are swapped and moved by permuting algorithms.</p>
+<p>This paper presents an extension to <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4382.pdf" title="Working Draft: C++ Extensions for Ranges">the Ranges design</a><span class="citation">[4]</span> that makes <em>proxy iterators</em> full-fledged members of the STL iterator hierarchy. This solves the “<code>vector&lt;bool&gt;</code>-is-not-a-container” problem along with several other problems that become apparent when working with range adaptors. It achieves this without <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1640.html" title="New Iterator Concepts">fracturing the <code>Iterator</code> concept hierarchy</a><span class="citation">[1]</span> and without breaking iterators apart into <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1873.html" title="The Cursor/Property Map Abstraction">separate traversal and access pieces</a><span class="citation">[3]</span>.</p>
+<p>The design presented makes only local changes to some Iterator concepts, fixes some existing library issues, and fills in a gap left by the addition of move semantics. To wit: the functions <code>std::swap</code> and <code>std::iter_swap</code> have been part of C++ since C++98. With C++11, the language got move semantics and <code>std::move</code>, but not <code>std::iter_move</code>. This arguably is an oversight. By adding it and making both <code>iter_swap</code> and <code>iter_move</code> customization points, iterators can control how elements are swapped and moved by permuting algorithms.</p>
 <p>Also, there are outstanding issues in <code>common_type</code>, and by ignoring top-level cv- and ref-qualifiers, the trait is not as general as it could be. By fixing the issues and adding a new trait – <code>common_reference</code> – that respects cv- and ref-qualifiers, we kill two birds. With the new <code>common_reference</code> trait and <code>iter_move</code> customization point, we can generalize the Iterator concepts – <code>Readable</code>, <code>IndirectlyMovable</code>, and <code>IndirectCallable</code> in particular – in ways that bring proxy iterators into the fold.</p>
 <p>Individually, these are simple changes the committee might want to make anyway. Together, they make a whole new class of data structures usable with the standard algorithms.</p>
 <p>The design is presented as a series of diffs to the latest draft of the Ranges Extensions.</p>
 <h1 id="implementation-experience"><span class="header-section-number">2</span> Implementation Experience</h1>
-<p>Everything suggested here has been implemented in C++11, where Concepts Lite has been simulated with the help of generalized SFINAE for expressions. In addition, a partial implementation using Concepts exists that works with the “<code>-std=c++1z</code>” support in gcc trunk.</p>
+<p>Everything suggested here has been implemented in C++11, where Concepts Lite has been simulated with the help of generalized SFINAE for expressions. In addition, a partial implementation using Concepts <a href="https://github.com/CaseyCarter/cmcstl2" title="CMCSLT2: Casey Carter&#39;s reference implementation of STL2">exists</a><span class="citation">[2]</span> that works with the “<code>-std=c++1z</code>” support in gcc trunk.</p>
 <h1 id="motivation-and-scope"><span class="header-section-number">3</span> Motivation and Scope</h1>
-<p>The proxy iterator problem has been known since at least 1999 when Herb Sutter wrote his article <a href="http://www.gotw.ca/publications/mill09.htm" title="When is a container not a container?">“When is a container not a container?”</a><span class="citation">[7]</span> about the problems with <code>vector&lt;bool&gt;</code>. Because <code>vector&lt;bool&gt;</code> stores the <code>bool</code>s as bits in packed integers rather than as actual <code>bool</code>s, its iterators cannot return a real <code>bool&amp;</code> when they are dereferenced; rather, they must return proxy objects that merely behave like <code>bool&amp;</code>. That would be fine except that:</p>
+<p>The proxy iterator problem has been known since at least 1999 when Herb Sutter wrote his article <a href="http://www.gotw.ca/publications/mill09.htm" title="When is a container not a container?">“When is a container not a container?”</a><span class="citation">[9]</span> about the problems with <code>vector&lt;bool&gt;</code>. Because <code>vector&lt;bool&gt;</code> stores the <code>bool</code>s as bits in packed integers rather than as actual <code>bool</code>s, its iterators cannot return a real <code>bool&amp;</code> when they are dereferenced; rather, they must return proxy objects that merely behave like <code>bool&amp;</code>. That would be fine except that:</p>
 <ol>
 <li>According to the iterator requirements tables, every iterator category stronger than InputIterator is required to return a real reference from its dereference operator (<code>vector</code> is required to have random-access iterators), and</li>
 <li>Algorithms that move and swap elements often do not work with proxy references.</li>
@@ -133,19 +133,19 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li>A view of elements in a database</li>
 <li>A view of elements in a different address space (e.g., in a different process or across the network)</li>
 <li>A view that does pre- and/or post-processing whenever an element is read or written (e.g., for logging purposes).</li>
-<li>A view of sub-objects (virtual or actual) that can only be accessed via getters and setters.</li>
+<li>A view of sub-objects (real or computed) that can only be accessed via getters and setters.</li>
 </ul>
-<p>These are all potentially interesting views that, as of today, can only be represented as Input sequences. That severely limits the number of algorithms that can operate on them. The design suggested by this paper would make all of these valid sequences even for RandomAccess.</p>
-<p>Note that not all iterators that return rvalues are proxy iterators. If the rvalue does not stand in for another object, it is not a proxy. For instance, an iterator that adapts another by multiplying each element by 2 is not a proxy iterator. The <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">Palo Alto report</a><span class="citation">[6]</span> lifts the onerous requirement that Forward iterators have true reference types, so they solve the “rvalue iterator” problem. However, as we show below, that is not enough to solve the “proxy iterator” problem.</p>
+<p>These are all potentially interesting views that, as of today, can only be represented as Input sequences. That severely limits the number of algorithms that can operate on them. The design suggested by this paper would make all of these valid sequences even for random access.</p>
+<p>Note that not all iterators that return rvalues are proxy iterators. If the rvalue does not stand in for another object, it is not a proxy. The <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">Palo Alto report</a><span class="citation">[8]</span> lifts the onerous requirement that Forward iterators have true reference types, so it solves the “rvalue iterator” problem. However, as we show below, that is not enough to solve the “proxy iterator” problem.</p>
 <h2 id="proxy-iterator-problems"><span class="header-section-number">3.1</span> Proxy Iterator problems</h2>
 <p>For all its problems, <code>vector&lt;bool&gt;</code> works surprisingly well in practice, despite the fact that fairly trivial code such as below is not portable.</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">std::vector&lt;<span class="dt">bool</span>&gt; v{<span class="kw">true</span>,<span class="kw">false</span>,<span class="kw">true</span>};
 <span class="kw">auto</span> i = v.begin();
 <span class="dt">bool</span> b = <span class="kw">false</span>;
 <span class="kw">using</span> std::swap;
-swap(*i, b);</code></pre></div>
+swap(*i, b);      <span class="co">// Not guaranteed to work.</span></code></pre></div>
 <p>Because of the fact that this code is underspecified, it is impossible to say with certainty which algorithms work with <code>vector&lt;bool&gt;</code>. That fact that many do is due largely to the efforts of implementors and to the fact that <code>bool</code> is a trivial, copyable type that hides many of the nastier problems with proxy references. For more interesting proxy reference types, the problems are impossible to hide.</p>
-<p>A more interesting proxy reference type is that of a <code>zip</code> range view from the <a href="http://www.github.com/ericniebler/range-v3" title="Range v3">range-v3</a><span class="citation">[4]</span> library. The <code>zip</code> view adapts two underlying sequences by building pairs of elements on the fly as the <code>zip</code> view is iterated.</p>
+<p>A more interesting proxy reference type is that of a <code>zip</code> range view from the <a href="http://www.github.com/ericniebler/range-v3" title="Range v3">range-v3</a><span class="citation">[6]</span> library. The <code>zip</code> view adapts two underlying sequences by building pairs of elements on the fly as the <code>zip</code> view is iterated.</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">vector&lt;<span class="dt">int</span>&gt; vi {<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>};
 vector&lt;string&gt; vs {<span class="st">&quot;a&quot;</span>,<span class="st">&quot;b&quot;</span>,<span class="st">&quot;c&quot;</span>};
 
@@ -154,9 +154,9 @@ vector&lt;string&gt; vs {<span class="st">&quot;a&quot;</span>,<span class="st">
 <span class="kw">static_assert</span>(is_same&lt;<span class="kw">decltype</span>(x), pair&lt;<span class="dt">int</span>&amp;,string&amp;&gt;&gt;{}, <span class="st">&quot;&quot;</span>);
 assert(&amp;x.first == &amp;vi[<span class="dv">0</span>]);
 assert(&amp;x.second == &amp;vs[<span class="dv">0</span>]);</code></pre></div>
-<p>The <code>zip</code> view’s iterator’s reference type is an rvalue <code>pair</code> object, but the <code>pair</code> holds lvalue references to the elements of the underlying sequences. This proxy reference type exposes more of the fundamental problems with proxies than does <code>vector&lt;bool&gt;</code>, so it will be used in the proceeding discussion.</p>
+<p>The <code>zip</code> view’s iterator’s reference type is a prvalue <code>pair</code> object, but the <code>pair</code> holds lvalue references to the elements of the underlying sequences. This proxy reference type exposes more of the fundamental problems with proxies than does <code>vector&lt;bool&gt;</code>, so it will be used in the following discussion.</p>
 <h3 id="permutable-proxy-iterators"><span class="header-section-number">3.1.1</span> Permutable proxy iterators</h3>
-<p>Many algorithms such as <code>partition</code> and <code>sort</code> must permute elements. The Palo Alto report [cite] uses a <code>Permutable</code> concept to group the constraints of these algorithms. <code>Permutable</code> is expressed in terms of an <code>IndirectlyMovable</code> concept, which is described as follows:</p>
+<p>Many algorithms such as <code>partition</code> and <code>sort</code> must permute elements. The <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3351.pdf" title="A Concept Design for the STL">Palo Alto report</a><span class="citation">[8]</span> uses a <code>Permutable</code> concept to group the constraints of these algorithms. <code>Permutable</code> is expressed in terms of an <code>IndirectlyMovable</code> concept, which is described as follows:</p>
 <blockquote>
 <p>The <code>IndirectlyMovable</code> and <code>IndirectlyCopyable</code> concepts describe copy and move relationships<br />
 between the values of an input iterator, <code>I</code>, and an output iterator <code>Out</code>. For an output iterator<br />
@@ -169,8 +169,8 @@ between the values of an input iterator, <code>I</code>, and an output iterator 
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">auto</span> i = zip.begin();
 <span class="kw">auto</span> j = next(i);
 *i = move(*j);</code></pre></div>
-<p>Since <code>*j</code> returns an rvalue <code>pair</code>, the <code>move</code> has no effect. The assignment then copies elements instead of moving them. Had one of the underlying sequences been of a move-only type like <code>unique_ptr</code>, the code would fail to compile.</p>
-<p>The fundamental problem is that with proxies, the expression <code>move(*j)</code> is moving the <em>proxy</em>, not the element being proxied. Patching this up in the current system would involve returning some special pair-like type from <code>*j</code> and overloading <code>move</code> for it such that it returns a different pair-like type that stores rvalue references. However, <code>move</code> is not a customization point, so the algorithms will not use it. Making <code>move</code> a customization point is one possible fix, but the effects on user code such a change are unknown (and unknowable).</p>
+<p>Since <code>*j</code> returns a prvalue <code>pair</code>, the <code>move</code> has no effect. The assignment then copies elements instead of moving them. Had one of the underlying sequences been of a move-only type like <code>unique_ptr</code>, the code would fail to compile.</p>
+<p>The fundamental problem is that with proxies, the expression <code>move(*j)</code> is moving the <em>proxy</em>, not the element(s) being proxied. Patching this up in the current system would involve returning some special pair-like type from <code>*j</code> and overloading <code>move</code> for it such that it returns a different pair-like type that stores rvalue references. However, <code>move</code> is not a customization point, so the algorithms will not use it. Making <code>move</code> a customization point is one possible fix, but the effects on user code such a change are unknown (and unknowable).</p>
 <h3 id="iterator-associated-types"><span class="header-section-number">3.1.2</span> Iterator associated types</h3>
 <p>The value and reference associated types must be related to each other in a way that can be relied upon by the algorithms. The Palo Alto report defines a <code>Readable</code> concept that expresses this relationship as follows (updated for the new Concepts Lite syntax):</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span>&lt; <span class="kw">class</span> I &gt;
@@ -179,7 +179,7 @@ concept <span class="dt">bool</span> Readable =
         <span class="kw">typename</span> ValueType&lt;I&gt;;
         { *i } -&gt; <span class="dt">const</span> ValueType&lt;I&gt;&amp;;
     };</code></pre></div>
-<p>The result of the dereference operation must be convertible to a const reference of the iterator’s value type. This works trivially for all iterators whose reference type is an lvalue reference, and it also works for some proxy iterator types. In the case of <code>vector&lt;bool&gt;</code>, the dereference operator returns an object that is implicitly convertible to <code>bool</code>, which can bind to <code>const bool&amp;</code>.</p>
+<p>The result of the dereference operation must be convertible to a const reference of the iterator’s value type. This works trivially for all iterators whose reference type is an lvalue reference, and it also works for some proxy iterator types. In the case of <code>vector&lt;bool&gt;</code>, the dereference operator returns an object that is implicitly convertible to <code>bool</code>, which can bind to <code>const bool&amp;</code>, so <code>vector&lt;bool&gt;</code>’s iterators are <code>Readable</code>.</p>
 <p>But once again we are caught out by move-only types. A <code>zip</code> view that zips together a <code>vector&lt;unique_ptr&lt;int&gt;&gt;</code> and a <code>vector&lt;int&gt;</code> has the following associated types:</p>
 <table>
 <thead>
@@ -199,12 +199,12 @@ concept <span class="dt">bool</span> Readable =
 </tr>
 </tbody>
 </table>
-<p>To model <code>Readable</code>, the expression “<code>const ValueType&lt;I&gt;&amp; tmp = *i</code>” must be valid. But trying to initialize a <code>const pair&lt;unique_ptr&lt;int&gt;, int&gt;&amp;</code> with a <code>pair&lt;unique_ptr&lt;int&gt;&amp;, int&amp;&gt;</code> will fail. It tries to create a temporary <code>pair</code> that can be bound to the <code>const&amp;</code>, which tries to copy from an lvalue <code>unique_ptr</code>. So we see that the <code>zip</code> view’s iterators are not even <code>Readable</code> when one of the element types is move-only. That’s unacceptable.</p>
-<p>Although the Palo Alto report lifts the onerous restriction that <code>*i</code> must be an lvalue expression, we can see from the <code>Readable</code> concept that proxy reference types are still not adequately supported.</p>
+<p>To model <code>Readable</code>, the expression “<code>const ValueType&lt;I&gt;&amp; tmp = *i</code>” must be valid. But trying to initialize a <code>const pair&lt;unique_ptr&lt;int&gt;, int&gt;&amp;</code> with a <code>pair&lt;unique_ptr&lt;int&gt;&amp;, int&amp;&gt;</code> will fail. It ultimately tries to copy from an lvalue <code>unique_ptr</code>. So we see that the <code>zip</code> view’s iterators are not even <code>Readable</code> when one of the element types is move-only. That’s unacceptable.</p>
+<p>Although the Palo Alto report lifts the restriction that <code>*i</code> must be an lvalue expression, we can see from the <code>Readable</code> concept that proxy reference types are still not adequately supported.</p>
 <h3 id="constraining-higher-order-algorithms"><span class="header-section-number">3.1.3</span> Constraining higher-order algorithms</h3>
 <p>The Palo Alto report shows the constrained signature of the <code>for_each</code> algorithm as follows:</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span>&lt;InputIterator I, Semiregular F&gt;
-    requires Function&lt;F, ValueType&lt;I&gt;&gt;
+  requires Function&lt;F, ValueType&lt;I&gt;&gt;
 F for_each(I first, I last, F f);</code></pre></div>
 <p>Consider calling code</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="co">// As before, vi and vs are vectors</span>
@@ -216,19 +216,19 @@ for_each( z.begin(), z.end(), [](Ref r) {
     ++r.first;
 });</code></pre></div>
 <p>Without the constraint, this code compiles. With it, it doesn’t. The constraint <code>Function&lt;F, ValueType&lt;I&gt;&gt;</code> checks to see if the lambda is callable with <code>pair&lt;int,string&gt;</code>. The lambda accepts <code>pair&lt;int&amp;,string&amp;&gt;</code>. There is no conversion that makes the call succeed.</p>
-<p>Changing the lambda to accept either a “<code>pair&lt;int,string&gt; [const &amp;]</code>” or a “<code>pair&lt;int const &amp;, string const &amp;&gt; [const &amp;]</code>” would make the check succeed, but the body of the lambda would fail to compile or have the wrong semantics.</p>
+<p>Changing the lambda to accept either a “<code>pair&lt;int,string&gt; [const &amp;]</code>” or a “<code>pair&lt;int const &amp;, string const &amp;&gt; [const &amp;]</code>” would make the check succeed, but the body of the lambda would fail to compile or have the wrong semantics. The addition of the constraint has broken valid code, and there is no way to fix it (short of using a generic lambda).</p>
 <h2 id="problems-with-the-cross-type-concepts"><span class="header-section-number">3.2</span> Problems with the Cross-type Concepts</h2>
-<p>The purpose of the <code>Common</code> concept in the Palo Alto report is to make cross-type concepts semantically meaningful. The values of different types, <code>T</code> and <code>U</code>, can be projected into a shared domain where the operation(s) in question can be performed with identical semantics. Concepts like <code>EqualityComparable</code>, <code>TotallyOrdered</code>, and <code>Relation</code> use <code>Common</code> to enforce the semantic coherence that is needed for equational reasoning, even when argument types differ.</p>
-<p>However, the syntactic requirements of <code>Common</code> cause these concepts to be overconstrained. The “common” type cannot be any random type with no relation to the other two; rather, objects of the original two types must be explicitly convertible to the common type. The somewhat non-intuitive result of this is that <code>EqualityComparable&lt;T,T&gt;</code> can be false even when <code>EqualityComparable&lt;T&gt;</code> is true, due to the extra <code>Common&lt;T,T&gt;</code> constraint on the former and the fact that <code>Common&lt;T,T&gt;</code> is false for non-movable types: there is no such permissible explicit “conversion” from <code>T</code> to <code>T</code> when <code>T</code> is non-movable.</p>
+<p>The purpose of the <code>Common</code> concept in the Palo Alto report is to make cross-type concepts semantically meaningful; it requires that the values of different types, <code>T</code> and <code>U</code>, can be projected into a shared domain where the operation(s) in question can be performed with identical semantics. Concepts like <code>EqualityComparable</code>, <code>TotallyOrdered</code>, and <code>Relation</code> use <code>Common</code> to enforce the semantic coherence that is needed for equational reasoning, even when argument types differ.</p>
+<p>However, the syntactic requirements of <code>Common</code> cause these concepts to be overconstrained. The “common” type cannot be any random type with no relation to the other two; rather, objects of the original two types must be explicitly convertible to the common type. The somewhat non-intuitive result of this is that <code>EqualityComparable&lt;T,T&gt;</code> can be false even when <code>EqualityComparable&lt;T&gt;</code> is true. The former has an extra <code>Common&lt;T,T&gt;</code> constraint, which is false for non-movable types: there is no such permissible explicit “conversion” from <code>T</code> to <code>T</code> when <code>T</code> is non-movable.</p>
 <p>Although not strictly a problem with proxy iterators, the issues with the foundational concepts effect all the parts of the standard library built upon them and so must be addressed. The design described below offers a simple solution to an otherwise thorny problem.</p>
 <h1 id="proposed-design"><span class="header-section-number">4</span> Proposed Design</h1>
 <p>The design suggested here makes heavier use of an existing API, <code>iter_swap(I,I)</code>, promoting it to the status of customization point, thereby giving proxy iterators a way to control how elements are swapped. In addition, it suggests a new customization point: <code>iter_move(I)</code>, which can be used for moving an element at a certain position out of sequence, leaving a “hole”. The return type of <code>iter_move</code> is the iterator’s <em>rvalue reference</em>, a new associated type. The <code>IndirectlySwappable</code> and <code>IndirectlyMovable</code> concepts are re-expressed in terms of <code>iter_swap</code> and <code>iter_move</code>, respectively.</p>
 <p>The relationships between an iterator’s associated types, currently expressed in terms of convertability, are re-expressed in terms of a shared <em>common reference</em> type. A <em>common reference</em> is much like the familiar <code>common_type</code> trait, except that instead of throwing away top-level cv and ref qualifiers, they are preserved. Informally, the common reference of two reference types is the <em>minimally-qualified</em> reference type to which both types can bind. Like <code>common_type</code>, the new <code>common_reference</code> trait can be specialized.</p>
 <h2 id="impact-on-the-standard"><span class="header-section-number">4.1</span> Impact on the Standard</h2>
 <h3 id="overview-for-implementers"><span class="header-section-number">4.1.1</span> Overview, for implementers</h3>
-<p>The algorithms must be specified to use <code>iter_swap</code> and <code>iter_move</code> when swapping and moving elements. The concepts must be respecified in terms of the new customization points, and a new type trait, <code>common_reference</code>, must be specified and implemented. The known shortcomings of <code>common_type</code> (lack of SFINAE-friendliness, difficulty of specialization) must be addressed. Care must be taken in the algorithm implementations to hew to the valid expressions for the iterator concepts. The algorithm constraints must be respecified to accommodate proxy iterators.</p>
+<p>The algorithms must be specified to use <code>iter_swap</code> and <code>iter_move</code> when swapping and moving elements. The concepts must be respecified in terms of the new customization points, and a new type trait, <code>common_reference</code>, must be specified and implemented. The known shortcomings of <code>common_type</code> (e.g., <a href="https://cplusplus.github.io/LWG/lwg-active.html#2465">difficulty of specialization</a>) must be addressed. (The formulation of <code>common_type</code> given in this paper fixes all known issues.) Care must be taken in the algorithm implementations to hew to the valid expressions for the iterator concepts. The algorithm constraints must be respecified to accommodate proxy iterators.</p>
 <h3 id="overview-for-users"><span class="header-section-number">4.1.2</span> Overview, for users</h3>
-<p>For user code, the changes are minimal. Little to no conforming code that works today will stop working after adoping this resolution. The changes to <code>common_type</code> are potentially breaking, but only for conversion sequences that are sensitive to cv qualification and value category, and the committee has shown no reluctance to make similar changes to <code>common_type</code> before. And the addition of <code>common_reference</code> gives recourse to users who care about the issue.</p>
+<p>For user code, the changes are minimal. Little to no conforming code that works today will stop working after adoping this resolution. The changes to <code>common_type</code> are potentially breaking, but only for conversion sequences that are sensitive to cv qualification and value category, and the committee has shown no reluctance to make similar changes to <code>common_type</code> before. The addition of <code>common_reference</code> gives recourse to users who care about it.</p>
 <p>When adapting generic code to work with proxy iterators, calls to <code>swap</code> and <code>move</code> should be replaced with <code>iter_swap</code> and <code>iter_move</code>, and for calls to higher-order algorithms, generic lambdas are the preferred solution. When that’s not possible, functions can be changed to take arguments by the iterator’s <em>common reference</em> type, which is the result of applying the <code>common_reference</code> trait to <code>ReferenceType&lt;I&gt;</code> and <code>ValueType&lt;I&gt;&amp;</code>. (An <code>iter_common_reference_t&lt;I&gt;</code> type alias is suggested to make this simpler.)</p>
 <h3 id="commonreference-and-commontype"><span class="header-section-number">4.1.3</span> CommonReference and CommonType</h3>
 <p>The suggested <code>common_reference</code> type trait and the <code>CommonReference</code> concept that uses it, which is used to express the constraints between an iterator’s associated types, takes two (possibly cv- and ref-qualified) types and finds a common type (also possibly qualified) to which they can both be converted <em>or bound</em>. When passed two reference types, <code>common_reference</code> tries to find another reference type to which both references can bind. (<code>common_reference</code> may return a non-reference type if no such reference type is found.) If common references exist between an iterator’s associated types, then generic code knows how to manipulate values read from the iterator, and the iterator “makes sense”.</p>
@@ -239,7 +239,7 @@ for_each( z.begin(), z.end(), [](Ref r) {
   <span class="kw">template</span> &lt;<span class="kw">class</span>&gt; <span class="kw">class</span> UQual&gt;
 <span class="kw">struct</span> basic_common_reference;</code></pre></div>
 <p>An instantiation of <code>common_reference&lt;T cv &amp;, U cv &amp;&gt;</code> defers to <code>basic_common_reference&lt;T, U, tqual, uqual&gt;</code>, where <code>tqual</code> is a unary alias template such that <code>tqual&lt;T&gt;</code> is <code>T cv &amp;</code>. Basically, the template template parameters encode the type qualifiers that got stripped from the first two arguments. That permits users to effectively partially specialize <code>basic_common_reference</code> – and hence <code>common_reference</code> – on type qualifiers.</p>
-<p>For instance, here is the partial specialization that find the common “reference” of a <code>tuple</code>s of references – which is a proxy reference.</p>
+<p>For instance, here is the partial specialization that find the common “reference” of two <code>tuple</code>s of references – which is a proxy reference.</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span> &lt;<span class="kw">class</span>...Ts, <span class="kw">class</span>...Us,
   <span class="kw">template</span> &lt;<span class="kw">class</span>&gt; <span class="kw">class</span> TQual, 
   <span class="kw">template</span> &lt;<span class="kw">class</span>&gt; <span class="kw">class</span> UQual&gt;
@@ -263,16 +263,13 @@ Movable{T}
   u = move(tmp);
 }
 
-<span class="co">// Define iter_swap in terms of swap it that&#39;s possible</span>
+<span class="co">// Define iter_swap in terms of swap if that&#39;s possible</span>
 <span class="kw">template</span> &lt;Readable R1, Readable R2&gt;
   <span class="co">// Swappable concept defined in new &lt;concepts&gt; header</span>
   requires Swappable&lt;ReferenceType&lt;R1&gt;, ReferenceType&lt;R2&gt;&gt;()
 <span class="dt">void</span> iter_swap(R1 r1, R2 r2) <span class="kw">noexcept</span>(<span class="kw">noexcept</span>(swap(*r1, *r2))) {
   swap(*r1, *r2);
 }</code></pre></div>
-<!--
-Most permutaing algorithms use `swap` to swap elements (with the mysterious exception of `reverse` which uses `iter_swap`). Sorting a `zip` view doesn't work because there is no overload of `swap` that takes rvalue `pair` objects. Defining such an overload -- perhaps only if the pair's element types are references -- would be enough to make some permuting algorithms work, but not all. Those algorithms that use `std::move` to move elements out of sequence and into temporaries (e.g. the pivot element of QuickSort) will still not work because moving a temporary pair has not effect. The `move` utility is not a customization point.
--->
 <p>By making <code>iter_swap</code> a customization point and requiring all algorithms to use it instead of <code>swap</code>, we make it possible for proxy iterators to customize how elements are swapped.</p>
 <p>Code that currently uses “<code>using std::swap; swap(*i1, *i2);</code>” can be trivially upgraded to this new formulation by doing “<code>using std::iter_swap; iter_swap(i1, i2)</code>” instead.</p>
 <p>In addition, this paper recommends adding a new customization point: <code>iter_move</code>. This is for use by those permuting algorithms that must move elements out of sequence temporarily. <code>iter_move</code> is defined essentially as follows:</p>
@@ -314,7 +311,7 @@ ValueType&lt;I&gt; tmp = iter_move(it);
 }</code></pre></div>
 <p>See below for the updated <code>IndirectlyMovable</code> concept.</p>
 <h3 id="iterator-concepts"><span class="header-section-number">4.1.5</span> Iterator Concepts</h3>
-<p>Rather than requiring that an iterator’s <code>ReferenceType</code> is convertible to <code>const ValueType&lt;I&gt;&amp;</code>– which is overconstraining for proxied sequences – we require that there is a shared reference-like type to which both references and values can bind. The new <code>RvalueReferenceType</code> associated type needs a similar constraint.</p>
+<p>Rather than requiring that an iterator’s <code>ReferenceType</code> be convertible to <code>const ValueType&lt;I&gt;&amp;</code>– which is overconstraining for proxied sequences – we require that there is a shared reference-like type to which both references and values can bind. The new <code>RvalueReferenceType</code> associated type needs a similar constraint.</p>
 <p>Only the syntactic requirements are given here. The semantic requirements are described in the <a href="#technical-specifications">Technical Specifications</a> section.</p>
 <h4 id="concept-readable"><span class="header-section-number">4.1.5.1</span> Concept Readable</h4>
 <p>Below is the suggested new formulation for the <code>Readable</code> concept:</p>
@@ -389,7 +386,7 @@ concept <span class="dt">bool</span> IndirectlySwappable() {
     };
 }</code></pre></div>
 <h3 id="algorithm-constraints-indirectcallable"><span class="header-section-number">4.1.6</span> Algorithm constraints: IndirectCallable</h3>
-<p>Further problems with proxy iterators arise while trying to constrain algorithms that accept callback functions from users: predicates, relations, and projections. Below, for example, is part of the implementation of <code>unique_copy</code> from the <a href="https://www.sgi.com/tech/stl/" title="SGI Standard Template Library Programmer&#39;s Guide">SGI STL</a><span class="citation">[5]</span>.</p>
+<p>Further problems with proxy iterators arise while trying to constrain algorithms that accept callback functions from users: predicates, relations, and projections. Below, for example, is part of the implementation of <code>unique_copy</code> from the <a href="https://www.sgi.com/tech/stl/" title="SGI Standard Template Library Programmer&#39;s Guide">SGI STL</a><span class="citation">[7]</span>.</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">_Tp value = *first;
 *result = value;
 <span class="kw">while</span> (++first != last)
@@ -430,15 +427,20 @@ sort(first, last, [](<span class="kw">auto</span>&amp;&amp; x, <span class="kw">
 <span class="kw">using</span> R = iter_common_reference_t&lt;I&gt;;
 sort(first, last, [](R&amp;&amp; x, R&amp;&amp; y) {<span class="kw">return</span> x &lt; y;});</code></pre></div>
 <h1 id="alternate-designs"><span class="header-section-number">5</span> Alternate Designs</h1>
-<h2 id="make-move-a-customization-point"><span class="header-section-number">5.1</span> Make move a customization point</h2>
-<p>Breaking change. What does move(std::ref(i)) do? Hard to know what the Right Thing is for std::pair and std::tuple since there isn’t enough context.</p>
-<p>TODO discussion</p>
+<h2 id="make-move-a-customization-point"><span class="header-section-number">5.1</span> Make <code>move</code> a customization point</h2>
+<p>Rather than adding a new customization point (<code>iter_move</code>) we could press <code>std::move</code> into service as a partial solution to the proxy iterator problem. The idea would be to make expressions like <code>std::move(*it)</code> do the right thing for iterators like the <code>zip</code> iterator described above. That would involve making <code>move</code> a customization point and letting it return something other than an rvalue reference type, so that proxy lvalues can be turned into proxy rvalues. (This solution would still require <code>common_reference</code> to solve the other problems described above.)</p>
+<p>At first blush, this solution makes a kind of sense: <code>swap</code> is a customization point, so why isn’t <code>move</code>? That logic overlooks the fact that users already have a way to specify how types are moved: with the move constructor and move assignment operator. Rvalue references and move semantics are complicated enough without adding yet another wrinkle, and overloads of <code>move</code> that return something other than <code>T&amp;&amp;</code> qualify as a wrinkle; <code>move</code> is widely used, and there’s no telling how much code could break if <code>move</code> returned something other than a <code>T&amp;&amp;</code>.</p>
+<p>It’s also a breaking change since <code>move</code> is often called qualified, as <code>std::move</code>. That would not find any overloads in other namespaces unless the approach described in <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4381.html" title="Suggested Design for Customization Points">N4381</a><span class="citation">[5]</span> were adopted. Turning <code>move</code> into a namespace-scoped function object (the customization point design suggested by <code>N4381</code>) comes with its own risks, as described in that paper.</p>
+<p>Making <code>move</code> the customization point instead of <code>iter_move</code> reduces design flexibility for authors of proxy iterator types since argument-dependent dispatch happens on the type of the proxy <em>reference</em> instead of the iterator. Consider the <code>zip</code> iterator described above, whose reference type is a prvalue <code>pair</code> of lvalue references. To make this iterator work using <code>move</code> as the customization point would require overloading <code>move</code> on <code>pair</code>. That would be a breaking change since <code>move</code> of <code>pair</code> already has a meaning. Rather, the <code>zip</code> iterator’s reference type would have to be some special <code>proxy_pair</code> type just so that <code>move</code> could be overloaded for it. That’s undesirable.</p>
+<p>A correlary of the above point involves proxy-like types like <code>reference_wrapper</code>. Given an lvalue <code>reference_wrapper</code> named “<code>x</code>”, it’s unclear what <code>move(x)</code> should do. Should it return an rvalue reference to “<code>x</code>”, or should it return a temporary object that wraps an rvalue reference to “<code>x.get()</code>”? With <code>move</code> as a customization point, there is often not enough context to say with certainty what behavior to assign to <code>move</code> for a type that stores references.</p>
+<p>For all these reasons, this paper prefers to add a new, dedicated API – <code>iter_move</code> – whose use is unambiguous.</p>
 <h2 id="new-iterator-concepts"><span class="header-section-number">5.2</span> New iterator concepts</h2>
 <p>In <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1640.html" title="New Iterator Concepts">N1640</a><span class="citation">[1]</span>, Abrahams et.al. describe a decomposition of the standard iterator concept hierarchy into access concepts: <code>Readable</code>, <code>Writable</code>, <code>Swappable</code>, and <code>Lvalue</code>; and traversal concepts: <code>SinglePass</code>, <code>Forward</code>, <code>Bidirectional</code>, and <code>RandomAccess</code>. Like the design suggested in this paper, the <code>Swappable</code> concept from N1640 is specified in terms of <code>iter_swap</code>. Since N1640 was written before move semantics, it does not have anything like <code>iter_move</code>, but it’s reasonable to assume that it would have invented something similar.</p>
 <p>Like the Palo Alto report, the <code>Readable</code> concept from N1640 requires a convertibility constraint between an iterator’s reference and value associated types. As a result, N1640 does not adequately address the proxy reference problem as presented in this paper. In particular, it is incapable of correctly expressing the relationship between a move-only value type and its proxy reference type. Also, the somewhat complicated iterator tag composition suggested by N1640 is not necessary in a world with concept-based overloading.</p>
-<p>In other respect, N1640 agrees with the STL design suggested by the Palo Alto report and the Ranges TS, which also has concepts for <code>Readable</code>, <code>Writable</code>. In the Palo Alto design, these “access” concepts are not purely orthogonal to the “traversal” concepts of <code>InputIterator</code>, <code>ForwardIterator</code>, however, since the latter are not pure traversal concepts; rather, these iterators are all <code>Readable</code>. The standard algorithms have little need for writable-but-not-readable random access iterators, for instance, so a purely orthogonal design does not accurately capture the requirements clusters that appear in the algorithm constraints. The binary concepts <code>IndirectlyMovable&lt;I,O&gt;</code>, <code>IndirectlyCopyable&lt;I,O&gt;</code>, and <code>IndirectlySwappable&lt;I1,I2&gt;</code> from the Palo Alto report do a better job of grouping common requirements and reducing verbosity in the algorithm constraints.</p>
+<p>In other respects, N1640 agrees with the STL design suggested by the Palo Alto report and the Ranges TS, which also has concepts for <code>Readable</code> and <code>Writable</code>. In the Palo Alto design, these “access” concepts are not purely orthogonal to the “traversal” concepts of <code>InputIterator</code>, <code>ForwardIterator</code>, however, since the latter are not pure traversal concepts; rather, these iterators are all <code>Readable</code>. The standard algorithms have little need for writable-but-not-readable random access iterators, for instance, so a purely orthogonal design does not accurately capture the requirements clusters that appear in the algorithm constraints. The binary concepts <code>IndirectlyMovable&lt;I,O&gt;</code>, <code>IndirectlyCopyable&lt;I,O&gt;</code>, and <code>IndirectlySwappable&lt;I1,I2&gt;</code> from the Palo Alto report do a better job of grouping common requirements and reducing verbosity in the algorithm constraints.</p>
 <h2 id="cursorproperty-map"><span class="header-section-number">5.3</span> Cursor/Property Map</h2>
-<p><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1873.html" title="The Cursor/Property Map Abstraction">N1873</a><span class="citation">[2]</span>, the “Cursor/Property Map Abstraction” BUGBUG TODO</p>
+<p><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1873.html" title="The Cursor/Property Map Abstraction">N1873</a><span class="citation">[3]</span>, the “Cursor/Property Map Abstraction”, suggests a radical solution to the proxy iterator problem, among others: break iterators into two distint entities – a cursor that denotes position and a property map that facilitates element access. A so-called property map (<code>pm</code>) is a polymorphic function that is used together with a cursor (<code>c</code>) to read an element (<code>pm(*c)</code>) and with a cursor and value (<code>v</code>) to write an element (<code>pm(*c, v)</code>). This alternate syntax for element access obviates the need for proxy objects entirely, so the proxy iterator problem simply disappears.</p>
+<p>The problems with this approach are mostly practical: the model is more complicated and the migration story is poor. No longer is a single object sufficient for both traversal and access. Three arguments are needed to denote a range: a begin cursor, an end cursor, and a property map. Generic code must be updated to account for the new syntax and for the extra property map argument. In other words, this solution is more invasive than the one this document presents.</p>
 <h2 id="language-support"><span class="header-section-number">5.4</span> Language support</h2>
 <p>In private exchange, Sean Parent suggested a more radical fix for the proxy reference problem: change the language. With his suggestion, it would be possible to specify that a type is a proxy reference with a syntax such as:</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">struct</span> bool_reference : <span class="dt">bool</span>&amp; {
@@ -453,7 +455,7 @@ sort(first, last, [](R&amp;&amp; x, R&amp;&amp; y) {<span class="kw">return</spa
 <p><strong>19.2.<em>X</em> Concept CommonReference [concepts.lib.corelang.commonref]</strong></p>
 <p>1. If <code>T</code> and <code>U</code> can both be explicitly converted or bound to a third type, <code>C</code>, then <code>T</code> and <code>U</code> share a <em>common reference type</em>, <code>C</code>. [ <em>Note:</em> <code>C</code> could be the same as <code>T</code>, or <code>U</code>, or it could be a different type. <code>C</code> may be a reference type. <code>C</code> may not be unique. –<em>end note</em> ] Informally, two types <code>T</code> and <code>U</code> model the <code>CommonReference</code> concept when the type alias <code>CommonReferenceType&lt;T, U&gt;</code> is well-formed and names a common reference type of <code>T</code> and <code>U</code>.</p>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
-<span class="kw">using</span> CommonReferenceType = common_reference_t&lt;T, U&gt;;
+<span class="kw">using</span> CommonReferenceType = std::common_reference_t&lt;T, U&gt;;
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
 concept <span class="dt">bool</span> CommonReference() {
@@ -477,7 +479,7 @@ concept <span class="dt">bool</span> CommonReference() {
 <p>Change 19.2.5 Concept Common to the following:</p>
 <blockquote>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
-<span class="kw">using</span> CommonType = common_type_t&lt;T, U&gt;;
+<span class="kw">using</span> CommonType = std::common_type_t&lt;T, U&gt;;
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
 concept <span class="dt">bool</span> Common() {
@@ -497,19 +499,17 @@ concept <span class="dt">bool</span> Common() {
 <p>Change the definitions of the cross-type concepts <code>Swappable&lt;T,U&gt;</code> ([concepts.lib.corelang.swappable]), <code>EqualityComparable&lt;T,U&gt;</code> ([concepts.lib.compare.equalitycomparable]), <code>TotallyOrdered&lt;T,U&gt;</code> ([concepts.lib.compare.totallyordered]), and <code>Relation&lt;F,T,U&gt;</code> ([concepts.lib.functions.relation]) to use <code>CommonReference&lt;const T&amp;, const U&amp;&gt;</code> instead of <code>Common&lt;T, U&gt;</code>.</p>
 <p>In addition, <code>Relation&lt;F,T,U&gt;</code> requires <code>Relation&lt;F, CommonReferenceType&lt;const T&amp;, const U&amp;&gt;&gt;</code> rather than <code>Relation&lt;F, CommonType&lt;T, U&gt;&gt;</code>.</p>
 <h3 id="chapter-20-general-utilities"><span class="header-section-number">6.0.2</span> Chapter 20: General utilities</h3>
-<p>To 20.2, add the following to the <code>&lt;utility&gt;</code> synopsis:</p>
+<p>To 20.2, add the following to the <code>&lt;utility&gt;</code> synopsis (<em>N.B.</em>, in namespace <code>std</code>):</p>
+<p><span style="color:blue">[<em>Editorial note:</em> – Future work: harmonize this with <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4426.html">N4426: Adding [nothrow-]swappable traits</a>. –<em>end note</em>]</span></p>
 <blockquote>
-<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="co">// is_nothrow_swappable (REF)</span>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="co">// is_nothrow_swappable</span>
 <span class="kw">template</span> &lt;<span class="kw">class</span> R1, <span class="kw">class</span> R2&gt;
 <span class="kw">struct</span> is_nothrow_swappable;
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> R1, <span class="kw">class</span> R2&gt;
-<span class="kw">struct</span> is_nothrow_swappable_t = <span class="kw">typename</span> is_nothrow_swappable&lt;R1, R2&gt;::type;
-
-<span class="kw">template</span> &lt;<span class="kw">class</span> R1, <span class="kw">class</span> R2&gt;
 <span class="kw">constexpr</span> <span class="dt">bool</span> is_nothrow_swappable_v = is_nothrow_swappable_t&lt;R1, R2&gt;::value;</code></pre></div>
 </blockquote>
-<p>Add subsection 20.2.6 <code>is_nothrow_swappable</code>:</p>
+<p>Add subsection 20.2.6 <code>is_nothrow_swappable</code> (<em>N.B.</em>, in namespace <code>std</code>):</p>
 <blockquote>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
 <span class="kw">struct</span> is_nothrow_swappable : false_type { };
@@ -517,11 +517,11 @@ Swappable{T, U}
 <span class="kw">struct</span> is_nothrow_swappable&lt;T, U&gt; :
   bool_constant&lt;<span class="kw">noexcept</span>(swap(declval&lt;T&gt;(), declval&lt;U&gt;()))&gt; { };</code></pre></div>
 </blockquote>
-<p>To 20.10.2, add the following to the <code>&lt;type_traits&gt;</code> synopsis:</p>
+<p>To 20.10.2, add the following to the <code>&lt;type_traits&gt;</code> synopsis (<em>N.B.</em>, in namespace <code>std</code>):</p>
 <blockquote>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="co">// 20.10.7.6, other transformations:</span>
 ...
-<span class="co">// common_reference (REF)</span>
+<span class="co">// common_reference</span>
 <span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U, <span class="kw">template</span> &lt;<span class="kw">class</span>&gt; <span class="kw">class</span> TQual, <span class="kw">template</span> &lt;<span class="kw">class</span>&gt; <span class="kw">class</span> UQual&gt;
 <span class="kw">struct</span> basic_common_reference { };
 <span class="kw">template</span> &lt;<span class="kw">class</span>... T&gt; <span class="kw">struct</span> common_reference;
@@ -889,18 +889,20 @@ type <code>I2</code>, <code>IndirectlySwappable&lt;I1,I2&gt;()</code> is satisfi
 <code>iter_swap(i1,i2)</code>, the value of <code>*i1</code> is equal to the value of<br />
 <code>*i2</code> before the call, and <em>vice versa</em>.</p>
 </blockquote>
-<p>Change the definition of the <code>Projected</code> struct in 24.3.3 “Projected iterator” ([projected.indirectcallables]) to the following:</p>
+<p>Swap subsections 24.3.3 ([projected.indirectcallables]) and 24.3.4 ([indirectfunct.indirectcallables]), and change the definition of the <code>Projected</code> struct ([projected.indirectcallables]) to the following:</p>
 <blockquote>
-<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span> &lt;Readable I, <span class="kw">class</span> Proj&gt;
-  requires RegularFunction&lt;FunctionType&lt;Proj&gt;, ValueType&lt;I&gt;&gt;() &amp;&amp;
-    RegularFunction&lt;FunctionType&lt;Proj&gt;, ReferenceType&lt;I&gt;&gt;() &amp;&amp;
-    RegularFunction&lt;FunctionType&lt;Proj&gt;, iter_common_reference_t&lt;I&gt;&gt;()
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span> &lt;Readable I, IndirectRegularCallable&lt;I&gt; Proj&gt;
 <span class="kw">struct</span> Projected {
   <span class="kw">using</span> value_type = decay_t&lt;ResultType&lt;FunctionType&lt;Proj&gt;, ValueType&lt;I&gt;&gt;&gt;;
   ResultType&lt;FunctionType&lt;Proj&gt;, ReferenceType&lt;I&gt;&gt; <span class="kw">operator</span>*() <span class="dt">const</span>;
+};
+
+<span class="kw">template</span> &lt;WeaklyIncrementable I, IndirectRegularCallable&lt;I&gt; Proj&gt;
+<span class="kw">struct</span> difference_type&lt;Projected&lt;I, Proj&gt;&gt; {
+  <span class="kw">using</span> type = DifferenceType&lt;I&gt;;
 };</code></pre></div>
 </blockquote>
-<p>Change 24.3.4 “Indirect callables” ([indirectfunc.indirectcallables]) as described as follows: remove concept <code>IndirectRegularCallable</code> since it is not currently used anywhere. Change <code>IndirectCallable</code>, <code>IndirectCallablePredicate</code>, <code>IndirectCallableRelation</code>, and <code>IndirectCallableStrictWeakOrder</code> as follows:</p>
+<p>Change 24.3.4 “Indirect callables” ([indirectfunc.indirectcallables]) as described as follows: Change <code>IndirectCallable</code>, <code>IndirectRegularCallable</code>, <code>IndirectCallablePredicate</code>, <code>IndirectCallableRelation</code>, and <code>IndirectCallableStrictWeakOrder</code> as follows:</p>
 <blockquote>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span> &lt;<span class="kw">class</span> F&gt;
 concept <span class="dt">bool</span> IndirectCallable() {
@@ -921,6 +923,27 @@ concept <span class="dt">bool</span> IndirectCallable() {
     Function&lt;FunctionType&lt;F&gt;, ReferenceType&lt;I1&gt;, ValueType&lt;I2&gt;&gt;() &amp;&amp;
     Function&lt;FunctionType&lt;F&gt;, ReferenceType&lt;I1&gt;, ReferenceType&lt;I2&gt;&gt;() &amp;&amp;
     Function&lt;FunctionType&lt;F&gt;, iter_common_reference_t&lt;I1&gt;, iter_common_reference_t&lt;I2&gt;&gt;();
+}
+
+<span class="kw">template</span> &lt;<span class="kw">class</span> F&gt;
+concept <span class="dt">bool</span> IndirectRegularCallable() {
+  <span class="kw">return</span> RegularFunction&lt;FunctionType&lt;F&gt;&gt;();
+}
+<span class="kw">template</span> &lt;<span class="kw">class</span> F, <span class="kw">class</span> I&gt;
+concept <span class="dt">bool</span> IndirectRegularCallable() {
+  <span class="kw">return</span> Readable&lt;I&gt;() &amp;&amp;
+    RegularFunction&lt;FunctionType&lt;F&gt;, ValueType&lt;I&gt;&gt;() &amp;&amp;
+    RegularFunction&lt;FunctionType&lt;F&gt;, ReferenceType&lt;I&gt;&gt;() &amp;&amp;
+    RegularFunction&lt;FunctionType&lt;F&gt;, iter_common_reference_t&lt;I&gt;&gt;();
+}
+<span class="kw">template</span> &lt;<span class="kw">class</span> F, <span class="kw">class</span> I1, <span class="kw">class</span> I2&gt;
+concept <span class="dt">bool</span> IndirectRegularCallable() {
+  <span class="kw">return</span> Readable&lt;I1&gt;() &amp;&amp; Readable&lt;I2&gt;() &amp;&amp;
+    RegularFunction&lt;FunctionType&lt;F&gt;, ValueType&lt;I1&gt;, ValueType&lt;I2&gt;&gt;() &amp;&amp;
+    RegularFunction&lt;FunctionType&lt;F&gt;, ValueType&lt;I1&gt;, ReferenceType&lt;I2&gt;&gt;() &amp;&amp;
+    RegularFunction&lt;FunctionType&lt;F&gt;, ReferenceType&lt;I1&gt;, ValueType&lt;I2&gt;&gt;() &amp;&amp;
+    RegularFunction&lt;FunctionType&lt;F&gt;, ReferenceType&lt;I1&gt;, ReferenceType&lt;I2&gt;&gt;() &amp;&amp;
+    RegularFunction&lt;FunctionType&lt;F&gt;, iter_common_reference_t&lt;I1&gt;, iter_common_reference_t&lt;I2&gt;&gt;();
 }
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> F, <span class="kw">class</span> I&gt;
@@ -960,9 +983,9 @@ concept <span class="dt">bool</span> IndirectCallableStrictWeakOrder() {
     StrictWeakOrder&lt;FunctionType&lt;F&gt;, iter_common_reference_t&lt;I1&gt;, iter_common_reference_t&lt;I2&gt;&gt;();
 }</code></pre></div>
 </blockquote>
-<p>Note: These definitions of of <code>IndirectCallable</code> and <code>IndirectCallablePredicate</code> are less general than the ones in N4382 that they replace. The original definitions are variadic but these handle only up to 2 arguments. The Standard Library never requires callback functions to accept more than two arguments, so the reduced expressive power does not impact the Standard Library; however, it may impact user code. The complication is the need to check callability with a cross-product of the parameters’ <code>ValueType</code> and <code>ReferenceType</code>s, which is difficult to expression using Concepts Lite and results in an explosion of tests to be performed as the number of parameters increases.</p>
+<p>Note: These definitions of <code>IndirectCallable</code> and <code>IndirectCallablePredicate</code> are less general than the ones in N4382 that they replace. The original definitions are variadic but these handle only up to 2 arguments. The Standard Library never requires callback functions to accept more than two arguments, so the reduced expressive power does not impact the Standard Library; however, it may impact user code. The complication is the need to check callability with a cross-product of the parameters’ <code>ValueType</code> and <code>ReferenceType</code>s, which is difficult to express using Concepts Lite and results in an explosion of tests to be performed as the number of parameters increases.</p>
 <p>There are several options for preserving the full expressive power of the N4382 concepts should that prove desirable: (1) Require callability testing only with arguments “<code>ValueType&lt;Is&gt;...</code>”, “<code>ReferenceType&lt;Is&gt;..</code>” , and “<code>iter_common_reference_t&lt;Is&gt;...</code>”, leaving the other combinations as merely documented constraints that are not required to be tested; (2) Actually test the full cross-product of argument types using meta-programming techniques, accepting the compile-time hit when argument lists get large. (The latter has been tested and shown to be feasable.)</p>
-<p>Change 24.6 “Header <code>&lt;iterator&gt;</code> synopsis” ([iterator.synopsis]) by adding the following to namespace <code>std::experimental::ranges_v1</code>:</p>
+<p>Change 24.6 “Header <code>&lt;experimental/ranges_v1/iterator&gt;</code> synopsis” ([iterator.synopsis]) by adding the following to namespace <code>std::experimental::ranges_v1</code>:</p>
 <blockquote>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="co">// Exposition only</span>
 <span class="kw">template</span> &lt;<span class="kw">class</span> T&gt;
@@ -977,9 +1000,6 @@ concept <span class="dt">bool</span> _Dereferenceable =
 <span class="co">// is_nothrow_indirectly_movable (REF)</span>
 <span class="kw">template</span> &lt;<span class="kw">class</span> R1, <span class="kw">class</span> R2&gt;
 <span class="kw">struct</span> is_nothrow_indirectly_movable;
-
-<span class="kw">template</span> &lt;<span class="kw">class</span> R1, <span class="kw">class</span> R2&gt;
-<span class="kw">struct</span> is_nothrow_indirectly_movable_t = <span class="kw">typename</span> is_nothrow_indirectly_movable&lt;R1, R2&gt;::type;
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> R1, <span class="kw">class</span> R2&gt;
 <span class="kw">constexpr</span> <span class="dt">bool</span> is_nothrow_indirectly_movable_v = is_nothrow_indirectly_movable_t&lt;R1, R2&gt;::value;
@@ -1011,9 +1031,6 @@ concept <span class="dt">bool</span> _Dereferenceable =
 <span class="kw">struct</span> is_nothrow_indirectly_swappable;
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> R1, <span class="kw">class</span> R2&gt;
-<span class="kw">struct</span> is_nothrow_indirectly_swappable_t = <span class="kw">typename</span> is_nothrow_indirectly_swappable&lt;R1, R2&gt;::type;
-
-<span class="kw">template</span> &lt;<span class="kw">class</span> R1, <span class="kw">class</span> R2&gt;
 <span class="kw">constexpr</span> <span class="dt">bool</span> is_nothrow_indirectly_swappable_v = is_nothrow_indirectly_swappable_t&lt;R1, R2&gt;::value;
 
 <span class="kw">template</span> &lt;Readable I&gt;
@@ -1037,6 +1054,7 @@ a reference type; <code>decay_t&lt;R&gt;</code>, otherwise.<br />
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">noexcept</span>(Ret(std::move(*r)))</code></pre></div>
 </blockquote>
 <p>3. <em>Returns:</em> <code>std::move(*r)</code></p>
+<p><span style="color:blue">[<em>Editorial note:</em> – Future work: Rather than defining a new <code>iter_swap</code> in namespace <code>std::experimental::ranges_v1</code>, it will probably be necessary to constrain the <code>iter_swap</code> in namespace <code>std</code> much the way the Ranges TS constrains <code>std::swap</code>. –<em>end note</em>]</span></p>
 <blockquote>
 <div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">template</span> &lt;<span class="kw">class</span> R1, <span class="kw">class</span> R2,
   Readable _R1 = remove_reference_t&lt;R1&gt;,
@@ -1089,8 +1107,8 @@ shall be defined as follows:</p>
 </blockquote>
 <p>Overload resolution (13.3) on the expression <code>iter_move(t)</code> selects a<br />
 unary non-member function “<code>iter_move</code>” from a candidate set that includes<br />
-the function <code>iter_move</code> in <code>&lt;iterator&gt;</code> (24.6) and the lookup set<br />
-produced by argument-dependent lookup (3.4.2).</p>
+the function <code>iter_move</code> in <code>&lt;experimental/ranges_v1/iterator&gt;</code> (24.6) and<br />
+the lookup set produced by argument-dependent lookup (3.4.2).</p>
 </blockquote>
 <p>After subsubsection “Iterator operations” ([iterator.operations]), add a<br />
 new subsubsection “Iterator traits” ([iterator.traits]). Under that<br />
@@ -1147,23 +1165,29 @@ template&lt;InputRange Rng, WeaklyIncrementable O, class Proj = identity,
 <div id="ref-new-iter-concepts">
 <p>[1] Abrahams, D. et al. 2004. N1640: New Iterator Concepts.</p>
 </div>
+<div id="ref-cmcstl2">
+<p>[2] CMCSTL2: <em><a href="https://github.com/CaseyCarter/cmcstl2" class="uri">https://github.com/CaseyCarter/cmcstl2</a></em>. Accessed: 2015-09-09.</p>
+</div>
 <div id="ref-n1873">
-<p>[2] Dietmar, K. and Abrahams, D. 2005. N1873: The Cursor/Property Map Abstraction.</p>
+<p>[3] Dietmar, K. and Abrahams, D. 2005. N1873: The Cursor/Property Map Abstraction.</p>
 </div>
 <div id="ref-n4382">
-<p>[3] Niebler, E. 2015. N4382: Working Draft: C++ Extensions for Ranges.</p>
+<p>[4] Niebler, E. 2015. N4382: Working Draft: C++ Extensions for Ranges.</p>
+</div>
+<div id="ref-custpoints">
+<p>[5] Niebler, E. 2015. Suggested Design for Customization Points.</p>
 </div>
 <div id="ref-range-v3">
-<p>[4] Range v3: <em><a href="http://www.github.com/ericniebler/range-v3" class="uri">http://www.github.com/ericniebler/range-v3</a></em>. Accessed: 2014-10-08.</p>
+<p>[6] Range v3: <em><a href="http://www.github.com/ericniebler/range-v3" class="uri">http://www.github.com/ericniebler/range-v3</a></em>. Accessed: 2014-10-08.</p>
 </div>
 <div id="ref-sgi-stl">
-<p>[5] SGI Standard Template Library Programmer’s Guide: <em><a href="https://www.sgi.com/tech/stl/" class="uri">https://www.sgi.com/tech/stl/</a></em>. Accessed: 2015-08-12.</p>
+<p>[7] SGI Standard Template Library Programmer’s Guide: <em><a href="https://www.sgi.com/tech/stl/" class="uri">https://www.sgi.com/tech/stl/</a></em>. Accessed: 2015-08-12.</p>
 </div>
-<div id="ref-palo-alto">
-<p>[6] Stroustrup, B. and Sutton, A. 2013. N3351: A Concept Design for the STL.</p>
+<div id="ref-n3351">
+<p>[8] Stroustrup, B. and Sutton, A. 2012. N3351: A Concept Design for the STL.</p>
 </div>
 <div id="ref-sutter-99">
-<p>[7] Sutter, H. 1999. When is a container not a container? <em>C++ Report</em>. 11, 5 (May 1999).</p>
+<p>[9] Sutter, H. 1999. When is a container not a container? <em>C++ Report</em>. 11, 5 (May 1999).</p>
 </div>
 </div>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -1321,15 +1345,18 @@ _Valid{T, ...U}
 <span class="kw">template</span> &lt;<span class="kw">class</span> T&gt;
 <span class="kw">struct</span> common_type&lt;T&gt; : std::decay&lt;T&gt; { };
 
-<span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
-<span class="kw">struct</span> common_type&lt;T, U&gt;
-  : common_type&lt;decay_t&lt;T&gt;, decay_t&lt;U&gt;&gt; { };
-
 <span class="kw">template</span> &lt;<span class="kw">class</span> T&gt;
 concept <span class="dt">bool</span> _Decayed = __v&lt;is_same&lt;decay_t&lt;T&gt;, T&gt;&gt;;
 
+<span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
+<span class="kw">struct</span> __common_type2
+  : common_type&lt;decay_t&lt;T&gt;, decay_t&lt;U&gt;&gt; { };
+
 <span class="kw">template</span> &lt;_Decayed T, _Decayed U&gt;
-<span class="kw">struct</span> common_type&lt;T, U&gt; : <span class="ot">__builtin_common</span>&lt;T, U&gt; { };
+<span class="kw">struct</span> __common_type2&lt;T, U&gt; : <span class="ot">__builtin_common</span>&lt;T, U&gt; { };
+
+<span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
+<span class="kw">struct</span> common_type&lt;T, U&gt; : __common_type2&lt;T, U&gt; { };
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U, <span class="kw">class</span> V, <span class="kw">class</span>... W&gt;
   requires _Valid&lt;common_type_t, T, U&gt;
@@ -1374,15 +1401,17 @@ concept <span class="dt">bool</span> _Decayed = __v&lt;is_same&lt;decay_t&lt;T&g
 <span class="kw">struct</span> common_reference&lt;T&gt; : __id&lt;T&gt; { };
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
-<span class="kw">struct</span> common_reference&lt;T, U&gt;
-  : std::conditional_t&lt;
-      __v&lt;__has_type&lt;__basic_common_reference&lt;T, U&gt;&gt;&gt;,
+<span class="kw">struct</span> __common_reference2
+  : std::conditional_t&lt;__v&lt;__has_type&lt;__basic_common_reference&lt;T, U&gt;&gt;&gt;,
       __basic_common_reference&lt;T, U&gt;, common_type&lt;T, U&gt;&gt; { };
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
   requires _Valid&lt;<span class="ot">__builtin_common_t</span>, T, U&gt;
-    &amp;&amp; __v&lt;std::is_reference&lt;<span class="ot">__builtin_common_t</span>&lt;T, U&gt;&gt;&gt;
-<span class="kw">struct</span> common_reference&lt;T, U&gt; : <span class="ot">__builtin_common</span>&lt;T, U&gt; { };
+    &amp;&amp; _Is&lt;<span class="ot">__builtin_common_t</span>&lt;T, U&gt;, std::is_reference&gt;
+<span class="kw">struct</span> __common_reference2&lt;T, U&gt; : <span class="ot">__builtin_common</span>&lt;T, U&gt; { };
+
+<span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U&gt;
+<span class="kw">struct</span> common_reference&lt;T, U&gt; : __common_reference2&lt;T, U&gt; { };
 
 <span class="kw">template</span> &lt;<span class="kw">class</span> T, <span class="kw">class</span> U, <span class="kw">class</span> V, <span class="kw">class</span>... W&gt;
   requires _Valid&lt;common_reference_t, T, U&gt;
